@@ -72,29 +72,29 @@
 
 ## Traceability
 
-Updated during roadmap creation.
+Updated during roadmap creation — 2026-05-31.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TARG-01 | — | Pending |
-| TARG-02 | — | Pending |
-| PAT-01 | — | Pending |
-| PAT-02 | — | Pending |
-| PAT-03 | — | Pending |
-| EXEC-01 | — | Pending |
-| EXEC-02 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
-| RPRT-01 | — | Pending |
-| RPRT-02 | — | Pending |
-| RPRT-03 | — | Pending |
-| UX-01 | — | Pending |
+| TARG-01 | Phase 1 | Pending |
+| TARG-02 | Phase 1 | Pending |
+| PAT-01 | Phase 1 | Pending |
+| PAT-02 | Phase 1 | Pending |
+| PAT-03 | Phase 1 | Pending |
+| EXEC-01 | Phase 1 | Pending |
+| EXEC-02 | Phase 1 | Pending |
+| RPRT-01 | Phase 1 | Pending |
+| RPRT-02 | Phase 1 | Pending |
+| SAFE-01 | Phase 2 | Pending |
+| SAFE-02 | Phase 2 | Pending |
+| RPRT-03 | Phase 2 | Pending |
+| UX-01 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-31*
-*Last updated: 2026-05-31 after initial definition*
+*Last updated: 2026-05-31 after roadmap creation*

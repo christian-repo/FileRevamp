@@ -1,5 +1,6 @@
 using FileRevamp.Commands;
 using FluentAssertions;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using Spectre.Console.Cli.Testing;
 
@@ -23,9 +24,23 @@ public sealed class RenameCommandTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Creates a CommandAppTester with IAnsiConsole wired to the tester's TestConsole.
+    /// This allows CommandAppTester to capture all output written by RenameCommand.
+    /// Registers both IAnsiConsole and RenameCommand so Spectre's DI can instantiate
+    /// the command with the test console injected.
+    /// </summary>
     private static CommandAppTester CreateTester()
     {
         var tester = new CommandAppTester();
+
+        // Register IAnsiConsole → TestConsole so RenameCommand gets the captured console.
+        // Also register RenameCommand itself so Spectre builds it via DI (not Activator.CreateInstance).
+        var registrar = new FakeTypeRegistrar();
+        registrar.RegisterInstance(typeof(IAnsiConsole), tester.Console);
+        registrar.RegisterInstance(typeof(RenameCommand), new RenameCommand(tester.Console));
+        tester.Registrar = registrar;
+
         tester.SetDefaultCommand<RenameCommand>("Rename files in a directory");
         tester.Configure(config =>
         {

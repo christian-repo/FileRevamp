@@ -12,6 +12,18 @@ namespace FileRevamp.Commands;
 /// </summary>
 public sealed class RenameCommand : Command<RenameSettings>
 {
+    private readonly IAnsiConsole _console;
+
+    /// <summary>
+    /// Initializes RenameCommand with an injected IAnsiConsole.
+    /// The injection enables CommandAppTester to capture output in tests.
+    /// Production code registers AnsiConsole.Console; test code uses CommandAppTester.Console.
+    /// </summary>
+    public RenameCommand(IAnsiConsole console)
+    {
+        _console = console;
+    }
+
     protected override int Execute(CommandContext context, RenameSettings settings, CancellationToken cancellationToken = default)
     {
         // Determine if settings.Path contains a glob pattern (e.g. /exports/*.csv).
@@ -38,7 +50,7 @@ public sealed class RenameCommand : Command<RenameSettings>
         // Validate the directory exists (Phase 1: directory-only mode).
         if (!Directory.Exists(directoryPath))
         {
-            AnsiConsole.MarkupLine($"[yellow]Directory not found: {Markup.Escape(directoryPath)}. No files to process.[/]");
+            _console.MarkupLine($"[yellow]Directory not found: {Markup.Escape(directoryPath)}. No files to process.[/]");
             return 0;
         }
 
@@ -61,7 +73,7 @@ public sealed class RenameCommand : Command<RenameSettings>
                 }
                 catch (ArgumentException ex)
                 {
-                    AnsiConsole.MarkupLine($"[red]Invalid --replace operand '{Markup.Escape(op)}': {Markup.Escape(ex.Message)}[/]");
+                    _console.MarkupLine($"[red]Invalid --replace operand '{Markup.Escape(op)}': {Markup.Escape(ex.Message)}[/]");
                     return null;
                 }
             })
@@ -81,16 +93,16 @@ public sealed class RenameCommand : Command<RenameSettings>
         {
             // T-03-01: Wrap in Markup.Escape() to prevent Spectre markup injection from filenames
             // containing [ or ] characters.
-            AnsiConsole.MarkupLine(Markup.Escape(reporter.FormatResultLine(result)));
+            _console.MarkupLine(Markup.Escape(reporter.FormatResultLine(result)));
         }
 
         if (settings.DryRun)
         {
-            AnsiConsole.MarkupLine(Markup.Escape(reporter.FormatDryRunComplete()));
+            _console.MarkupLine(Markup.Escape(reporter.FormatDryRunComplete()));
         }
         else
         {
-            AnsiConsole.MarkupLine(Markup.Escape(reporter.FormatSummary(results)));
+            _console.MarkupLine(Markup.Escape(reporter.FormatSummary(results)));
         }
 
         var failed = results.Count(r => r.Status == RenameStatus.Failed);

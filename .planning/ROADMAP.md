@@ -13,7 +13,7 @@ FileRevamp ships in three phases. Phase 1 builds the rename pipeline end-to-end 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core Rename Pipeline** - Targeting, transforms, dry-run, per-file output, and summary working end-to-end
+- [x] **Phase 1: Core Rename Pipeline** - Targeting, transforms, dry-run, per-file output, and summary working end-to-end *(completed 2026-05-31)*
 - [ ] **Phase 2: Safety and Reporting** - Pre-flight conflict detection, auto-numbering, error log file, and -help command
 - [ ] **Phase 3: Polish and Packaging** - dotnet global tool packaging, integration tests, and edge-case hardening
 
@@ -36,15 +36,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plansPlans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Walking Skeleton: project scaffold, IFileSystem seam, WildcardCompiler, RenameCommand --help, E2E dry-run test
+- [x] 01-01-PLAN.md — Walking Skeleton: project scaffold, IFileSystem seam, WildcardCompiler, RenameCommand --help, E2E dry-run test
 
-**Wave 2** *(blocked on Wave 1 completion)*
+**Wave 2**
 
-- [ ] 01-02-PLAN.md — Full pipeline: FileDiscovery (glob), ReplaceTransform, operation order (removes→replaces), live execution
+- [x] 01-02-PLAN.md — Full pipeline: FileDiscovery (glob), ReplaceTransform, operation order (removes→replaces), live execution
 
-**Wave 3** *(blocked on Wave 2 completion)*
+**Wave 3**
 
-- [ ] 01-03-PLAN.md — Reporter: per-file output formatting, summary counts, output validation, CommandAppTester CLI tests
+- [x] 01-03-PLAN.md — Reporter: per-file output formatting, summary counts, output validation, CommandAppTester CLI tests
 
 **UI hint**: no
 
@@ -86,6 +86,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Rename Pipeline | 0/3 | Planned | - |
+| 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
 | 2. Safety and Reporting | 0/? | Not started | - |
 | 3. Polish and Packaging | 0/? | Not started | - |

@@ -7,19 +7,19 @@
 
 ### Targeting
 
-- [ ] **TARG-01**: User can pass a directory path to rename all files inside it
-- [ ] **TARG-02**: User can pass a glob pattern (e.g. `*.csv`) to select files in the current directory
+- [x] **TARG-01**: User can pass a directory path to rename all files inside it
+- [x] **TARG-02**: User can pass a glob pattern (e.g. `*.csv`) to select files in the current directory
 
 ### Pattern Matching
 
-- [ ] **PAT-01**: User can specify a remove operation using simplified wildcard syntax with brace-token quantifiers (`{*}` = any chars, `{+}` = one or more, `{?}` = zero or one) — e.g. `_{*}new_{*}` removes `____new___` segments from filenames
-- [ ] **PAT-02**: User can specify a replace/transform operation to substitute characters or substrings — e.g. `.` → `-`
-- [ ] **PAT-03**: Multiple operations apply in fixed order: all remove operations first, then all replacement operations, in the order passed on the command line
+- [x] **PAT-01**: User can specify a remove operation using simplified wildcard syntax with brace-token quantifiers (`{*}` = any chars, `{+}` = one or more, `{?}` = zero or one) — e.g. `_{*}new_{*}` removes `____new___` segments from filenames
+- [x] **PAT-02**: User can specify a replace/transform operation to substitute characters or substrings — e.g. `.` → `-`
+- [x] **PAT-03**: Multiple operations apply in fixed order: all remove operations first, then all replacement operations, in the order passed on the command line
 
 ### Execution
 
-- [ ] **EXEC-01**: User can preview all renames with `--dry-run` — displays before/after pairs without touching any file
-- [ ] **EXEC-02**: Without `--dry-run`, tool executes all renames after pre-flight validation passes
+- [x] **EXEC-01**: User can preview all renames with `--dry-run` — displays before/after pairs without touching any file
+- [x] **EXEC-02**: Without `--dry-run`, tool executes all renames after pre-flight validation passes
 
 ### Safety
 
@@ -28,8 +28,8 @@
 
 ### Output & Reporting
 
-- [ ] **RPRT-01**: Tool displays each rename as it runs — source filename → destination filename (or `[DRY RUN]` prefix in dry-run mode)
-- [ ] **RPRT-02**: At end of run, tool displays a summary: total files processed, succeeded, and failed
+- [x] **RPRT-01**: Tool displays each rename as it runs — source filename → destination filename (or `[DRY RUN]` prefix in dry-run mode)
+- [x] **RPRT-02**: At end of run, tool displays a summary: total files processed, succeeded, and failed
 - [ ] **RPRT-03**: On any failure, tool creates a log file in the target directory listing each failed filename and the reason
 
 ### User Experience
@@ -76,15 +76,15 @@ Updated during roadmap creation — 2026-05-31.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TARG-01 | Phase 1 | Pending |
-| TARG-02 | Phase 1 | Pending |
-| PAT-01 | Phase 1 | Pending |
-| PAT-02 | Phase 1 | Pending |
-| PAT-03 | Phase 1 | Pending |
-| EXEC-01 | Phase 1 | Pending |
-| EXEC-02 | Phase 1 | Pending |
-| RPRT-01 | Phase 1 | Pending |
-| RPRT-02 | Phase 1 | Pending |
+| TARG-01 | Phase 1 | Complete |
+| TARG-02 | Phase 1 | Complete |
+| PAT-01 | Phase 1 | Complete |
+| PAT-02 | Phase 1 | Complete |
+| PAT-03 | Phase 1 | Complete |
+| EXEC-01 | Phase 1 | Complete |
+| EXEC-02 | Phase 1 | Complete |
+| RPRT-01 | Phase 1 | Complete |
+| RPRT-02 | Phase 1 | Complete |
 | SAFE-01 | Phase 2 | Pending |
 | SAFE-02 | Phase 2 | Pending |
 | RPRT-03 | Phase 2 | Pending |

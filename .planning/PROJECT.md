@@ -12,7 +12,14 @@ A file renaming operation must be predictable and reversible: show the user exac
 
 ### Validated
 
-(None yet — ship to validate)
+*Validated in Phase 1: Core Rename Pipeline*
+
+- [x] User can rename files by passing a directory path or glob pattern as the target
+- [x] User can specify remove operations using simplified wildcard syntax (e.g. `_{*}new_{*}`)
+- [x] User can specify replace/transform operations (e.g. replace `.` with `-`)
+- [x] Rename operations apply in fixed order: removes first, then replacements
+- [x] User can preview all renames with `--dry-run` without touching any files
+- [x] At end of run, a summary is displayed: count of successful renames and count of failures
 
 ### Active
 
@@ -74,4 +81,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after initialization*
+*Last updated: 2026-05-31 after Phase 1 completion*

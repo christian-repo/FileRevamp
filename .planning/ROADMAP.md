@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can specify a wildcard remove pattern (e.g. `_{*}new_{*}`) and matching segments are stripped from filenames
   4. User can specify a replace transform (e.g. `.` to `-`) and substitutions are applied after all removes
   5. Running with --dry-run displays every before/after pair prefixed with `[DRY RUN]` and exits with zero files modified; running without --dry-run renames files and displays the same before/after pairs live, followed by a succeeded/failed summary count
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Walking Skeleton: project scaffold, IFileSystem seam, WildcardCompiler, RenameCommand --help, E2E dry-run test
+- [ ] 01-02-PLAN.md — Full pipeline: FileDiscovery (glob), ReplaceTransform, operation order (removes→replaces), live execution
+- [ ] 01-03-PLAN.md — Reporter: per-file output formatting, summary counts, output validation, CommandAppTester CLI tests
 **UI hint**: no
 
 ### Phase 2: Safety and Reporting
@@ -64,6 +68,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Rename Pipeline | 0/? | Not started | - |
+| 1. Core Rename Pipeline | 0/3 | Planned | - |
 | 2. Safety and Reporting | 0/? | Not started | - |
 | 3. Polish and Packaging | 0/? | Not started | - |

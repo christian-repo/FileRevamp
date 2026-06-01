@@ -22,6 +22,13 @@ public sealed class WildcardPatternMatcher
     private readonly IReadOnlyList<(Regex MatchRegex, Regex RemoveRegex, string Replacement)> _patterns;
 
     /// <summary>
+    /// Returns <see langword="true"/> when at least one remove pattern is registered.
+    /// When this is <see langword="false"/>, the orchestrator applies replace transforms
+    /// to ALL files in the directory (replace-only mode, no file filtering by pattern).
+    /// </summary>
+    public bool HasPatterns => _patterns.Count > 0;
+
+    /// <summary>
     /// Initialises the matcher, compiling each pattern via <see cref="WildcardCompiler.ToRegex"/>.
     /// </summary>
     /// <param name="removePatterns">Zero or more wildcard patterns to remove from filenames.</param>

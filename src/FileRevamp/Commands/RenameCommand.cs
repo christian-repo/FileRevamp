@@ -69,54 +69,31 @@ public sealed class RenameCommand : Command<RenameSettings>
             .Cast<ReplaceTransform>()
             .ToList();
 
+        var reporter = new Reporter();
         var orchestrator = new RenameOrchestrator(fileSystem);
-        var results = orchestrator.Execute(directoryPath, globPattern, patternMatcher, replaceTransforms, settings.DryRun);
 
-        var renamed = 0;
-        var skipped = 0;
-        var failed = 0;
+        // Materialize results into a list so we can write the summary after all per-file lines.
+        // TODO(Phase 2): stream results for large batches to avoid holding all in memory.
+        var results = orchestrator.Execute(directoryPath, globPattern, patternMatcher, replaceTransforms, settings.DryRun)
+            .ToList();
 
         foreach (var result in results)
         {
-            switch (result.Status)
-            {
-                case RenameStatus.DryRun:
-                    AnsiConsole.MarkupLine(
-                        $"[yellow][[DRY RUN]][/] [grey]{Markup.Escape(result.OriginalName)}[/] [dim]→[/] [green]{Markup.Escape(result.NewName)}[/]");
-                    renamed++;
-                    break;
-
-                case RenameStatus.Renamed:
-                    AnsiConsole.MarkupLine(
-                        $"[green]{Markup.Escape(result.OriginalName)}[/] [dim]→[/] [green]{Markup.Escape(result.NewName)}[/]");
-                    renamed++;
-                    break;
-
-                case RenameStatus.Skipped:
-                    AnsiConsole.MarkupLine(
-                        $"[grey]SKIP {Markup.Escape(result.OriginalName)}: {Markup.Escape(result.FailureReason ?? string.Empty)}[/]");
-                    skipped++;
-                    break;
-
-                case RenameStatus.Failed:
-                    AnsiConsole.MarkupLine(
-                        $"[red]FAIL {Markup.Escape(result.OriginalName)}: {Markup.Escape(result.FailureReason ?? string.Empty)}[/]");
-                    failed++;
-                    break;
-            }
+            // T-03-01: Wrap in Markup.Escape() to prevent Spectre markup injection from filenames
+            // containing [ or ] characters.
+            AnsiConsole.MarkupLine(Markup.Escape(reporter.FormatResultLine(result)));
         }
 
         if (settings.DryRun)
         {
-            AnsiConsole.MarkupLine(
-                $"[yellow]Dry run complete — 0 files modified.[/] ({renamed} would rename, {skipped} skipped)");
+            AnsiConsole.MarkupLine(Markup.Escape(reporter.FormatDryRunComplete()));
         }
         else
         {
-            AnsiConsole.MarkupLine(
-                $"[bold]Done:[/] {renamed} renamed, {skipped} skipped, {failed} failed.");
+            AnsiConsole.MarkupLine(Markup.Escape(reporter.FormatSummary(results)));
         }
 
+        var failed = results.Count(r => r.Status == RenameStatus.Failed);
         return failed > 0 ? 1 : 0;
     }
 }

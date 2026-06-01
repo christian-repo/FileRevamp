@@ -83,6 +83,14 @@ public sealed class RenameOrchestrator
                 newFilename = transform.Apply(newFilename);
             }
 
+            // Pitfall 6: Validate computed filename does not have trailing dots or spaces (T-03 mitigation).
+            var outputNameError = Reporter.ValidateOutputName(newFilename);
+            if (outputNameError != null)
+            {
+                yield return RenameResult.FailedResult(filename, outputNameError);
+                continue;
+            }
+
             // T-02-01: Validate computed filename does not contain invalid path characters.
             var invalidChars = Path.GetInvalidFileNameChars();
             var invalidCharInName = newFilename.FirstOrDefault(c => Array.IndexOf(invalidChars, c) >= 0);

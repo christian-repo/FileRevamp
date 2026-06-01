@@ -14,7 +14,7 @@ namespace FileRevamp.Core;
 /// CONVERSION ORDER IS STRICT (per PITFALLS.md Pitfall 4):
 ///   Step 1: Regex.Escape(wildcardPattern)   — escapes . ( ) [ ] + ^ $ | { } etc.
 ///   Step 2: Replace escaped brace tokens with regex quantifiers
-///   Step 3: Wrap in ^...$ anchors
+///   Step 3: Optionally wrap in ^...$ anchors
 ///   Step 4: Compile with IgnoreCase | Compiled
 ///
 /// Any other order causes silent over-matching or broken patterns.
@@ -22,13 +22,19 @@ namespace FileRevamp.Core;
 public static class WildcardCompiler
 {
     /// <summary>
-    /// Converts a wildcard pattern to a compiled <see cref="Regex"/> anchored to the full string.
+    /// Converts a wildcard pattern to a compiled <see cref="Regex"/>.
     /// </summary>
     /// <param name="wildcardPattern">
     /// A pattern using {*}, {+}, {?} as wildcards and literal characters otherwise.
     /// </param>
-    /// <returns>A compiled, case-insensitive <see cref="Regex"/> that matches the full string.</returns>
-    public static Regex ToRegex(string wildcardPattern)
+    /// <param name="anchored">
+    /// When <see langword="true"/> (default), wraps the pattern in ^...$ anchors so it
+    /// matches the full string. When <see langword="false"/>, no anchors are added and
+    /// the pattern matches a substring anywhere in the input — useful for remove operations
+    /// where only a portion of the filename should be stripped.
+    /// </param>
+    /// <returns>A compiled, case-insensitive <see cref="Regex"/>.</returns>
+    public static Regex ToRegex(string wildcardPattern, bool anchored = true)
     {
         // Step 1: Escape ALL regex metacharacters in the raw pattern.
         //         Regex.Escape converts { → \{  } → \}  . → \.  + → \+  ( → \(  ) → \)  etc.
@@ -42,11 +48,11 @@ public static class WildcardCompiler
             .Replace(@"\{\+}", "(.+)")
             .Replace(@"\{\?}", "(.?)");
 
-        // Step 3: Wrap in anchors so the pattern matches the full string, not a substring.
-        var anchored = "^" + substituted + "$";
+        // Step 3: Optionally wrap in anchors so the pattern matches the full string, not a substring.
+        var pattern = anchored ? "^" + substituted + "$" : substituted;
 
         // Step 4: Compile for performance; use IgnoreCase for Windows filename matching.
-        return new Regex(anchored, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        return new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     }
 
     /// <summary>

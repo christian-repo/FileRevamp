@@ -15,13 +15,14 @@ public sealed class RenameCommand : Command<RenameSettings>
     private readonly IAnsiConsole _console;
 
     /// <summary>
-    /// Initializes RenameCommand with an injected IAnsiConsole.
-    /// The injection enables CommandAppTester to capture output in tests.
-    /// Production code registers AnsiConsole.Console; test code uses CommandAppTester.Console.
+    /// Initializes RenameCommand with an optional injected IAnsiConsole.
+    /// When <paramref name="console"/> is null (production, no DI registrar), falls back to
+    /// AnsiConsole.Console (the global terminal). When injected (tests), uses the provided
+    /// instance so CommandAppTester can capture output.
     /// </summary>
-    public RenameCommand(IAnsiConsole console)
+    public RenameCommand(IAnsiConsole? console = null)
     {
-        _console = console;
+        _console = console ?? AnsiConsole.Console;
     }
 
     protected override int Execute(CommandContext context, RenameSettings settings, CancellationToken cancellationToken = default)

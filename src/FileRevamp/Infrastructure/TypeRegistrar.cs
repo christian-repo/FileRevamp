@@ -4,55 +4,50 @@ namespace FileRevamp.Infrastructure;
 
 /// <summary>
 /// Minimal Spectre.Console.Cli type registrar for production use.
-/// Supports instance registrations (singletons) needed to inject IAnsiConsole.
+/// Wraps Spectre's internal registrations and overlays custom singleton registrations.
+///
+/// Design: Spectre calls Register() for its internal types (IHelpProvider, etc.).
+/// We store those registrations. When Resolve() is called, we first check our custom
+/// instances, then fall back to Spectre's registered types (created via Activator).
+/// Returning null for unknown/unresolvable types lets Spectre use its own fallback.
 /// </summary>
 internal sealed class TypeRegistrar : ITypeRegistrar
 {
-    private readonly Dictionary<Type, List<Type>> _registrations = new();
-    private readonly Dictionary<Type, List<object>> _instances = new();
+    private readonly Dictionary<Type, Type> _registrations = new();
+    private readonly Dictionary<Type, object> _instances = new();
 
     public void Register(Type service, Type implementation)
     {
-        if (!_registrations.TryGetValue(service, out var list))
-        {
-            list = new List<Type>();
-            _registrations[service] = list;
-        }
-        list.Add(implementation);
+        _registrations[service] = implementation;
     }
 
     public void RegisterInstance(Type service, object implementation)
     {
-        if (!_instances.TryGetValue(service, out var list))
-        {
-            list = new List<object>();
-            _instances[service] = list;
-        }
-        list.Add(implementation);
+        _instances[service] = implementation;
     }
 
     public void RegisterLazy(Type service, Func<object> factory)
     {
-        RegisterInstance(service, factory());
+        _instances[service] = factory();
     }
 
     public ITypeResolver Build()
     {
-        return new TypeResolver(_registrations, _instances);
+        return new TypeResolver(
+            new Dictionary<Type, Type>(_registrations),
+            new Dictionary<Type, object>(_instances));
     }
 }
 
 /// <summary>
-/// Resolves types from registrations and singleton instances.
+/// Resolves types: custom instances first, then registered concrete types, then null.
 /// </summary>
 internal sealed class TypeResolver : ITypeResolver, IDisposable
 {
-    private readonly Dictionary<Type, List<Type>> _registrations;
-    private readonly Dictionary<Type, List<object>> _instances;
+    private readonly Dictionary<Type, Type> _registrations;
+    private readonly Dictionary<Type, object> _instances;
 
-    public TypeResolver(
-        Dictionary<Type, List<Type>> registrations,
-        Dictionary<Type, List<object>> instances)
+    public TypeResolver(Dictionary<Type, Type> registrations, Dictionary<Type, object> instances)
     {
         _registrations = registrations;
         _instances = instances;
@@ -63,20 +58,22 @@ internal sealed class TypeResolver : ITypeResolver, IDisposable
         if (type is null)
             return null;
 
-        // Check singleton instances first
-        if (_instances.TryGetValue(type, out var instanceList) && instanceList.Count > 0)
-            return instanceList[^1];
+        // Custom singleton instances take highest priority (e.g., IAnsiConsole → AnsiConsole.Console)
+        if (_instances.TryGetValue(type, out var instance))
+            return instance;
 
-        // Fall back to registered types — instantiate with parameterless constructor
-        if (_registrations.TryGetValue(type, out var typeList) && typeList.Count > 0)
-            return Activator.CreateInstance(typeList[^1]);
+        // Spectre-registered concrete types (e.g., IEnumerable<IHelpProvider> → List<IHelpProvider>)
+        if (_registrations.TryGetValue(type, out var implType))
+        {
+            try { return Activator.CreateInstance(implType); }
+            catch { return null; }
+        }
 
-        // Last resort: try to activate the type directly
-        return Activator.CreateInstance(type);
+        // Unknown types: return null and let Spectre's fallback handle it.
+        // Do NOT call Activator.CreateInstance for unknown types — interfaces and abstract
+        // types will throw, causing "Could not resolve type" errors.
+        return null;
     }
 
-    public void Dispose()
-    {
-        // Nothing to dispose — instances are owned by the caller
-    }
+    public void Dispose() { }
 }

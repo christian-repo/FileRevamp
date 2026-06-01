@@ -48,4 +48,37 @@ public static class WildcardCompiler
         // Step 4: Compile for performance; use IgnoreCase for Windows filename matching.
         return new Regex(anchored, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     }
+
+    /// <summary>
+    /// Builds the replacement string for a remove operation.
+    ///
+    /// The "remove" semantic keeps the literal prefix (text before the first wildcard token)
+    /// and the first capture group ($1, what the first wildcard matched), effectively
+    /// removing the literal middle portion and any trailing wildcard match.
+    ///
+    /// Example: "_{*}new_{*}" → replacement "$1" applied to stem with regex ^_(.*?)new_(.*)$
+    ///          requires the literal prefix "_" to be prepended → "_$1"
+    /// </summary>
+    /// <param name="wildcardPattern">The raw wildcard pattern.</param>
+    /// <returns>A regex replacement string that retains only the pre-wildcard literal prefix and the first capture.</returns>
+    public static string BuildRemoveReplacement(string wildcardPattern)
+    {
+        // Find the position of the first wildcard token in the original pattern.
+        var firstTokenIndex = wildcardPattern.IndexOf('{');
+        if (firstTokenIndex < 0)
+        {
+            // No wildcard tokens — the pattern is a pure literal; replacing with "" removes everything.
+            return string.Empty;
+        }
+
+        // The literal prefix is everything before the first '{'.
+        var literalPrefix = wildcardPattern[..firstTokenIndex];
+
+        // Escape the literal prefix so it can be safely embedded in a replacement string.
+        // (Replacement strings interpret $ specially; escape any $ in the literal prefix.)
+        var escapedPrefix = literalPrefix.Replace("$", "$$");
+
+        // The replacement retains the literal prefix and appends $1 (first capture group).
+        return escapedPrefix + "$1";
+    }
 }

@@ -16,31 +16,38 @@ public sealed class MockFileSystem : IFileSystem
     public MockFileSystem(IEnumerable<string> initialFiles)
     {
         foreach (var path in initialFiles)
-            _files[path] = true;
+            _files[Normalize(path)] = true;
     }
 
     public IEnumerable<string> GetFiles(string directoryPath, string searchPattern)
     {
-        // Return all files whose directory component matches the requested directory.
-        // When directoryPath is "/" return all files (test convenience).
+        // Normalize separators to forward slash for comparison (tests use Unix-style paths).
+        var normalizedDir = Normalize(directoryPath).TrimEnd('/');
+
+        // When directoryPath is "/" or empty return all files (test convenience).
+        if (normalizedDir == string.Empty || normalizedDir == "/")
+            return _files.Keys;
+
         return _files.Keys.Where(path =>
-            directoryPath == "/"
-            || string.Equals(
-                Path.GetDirectoryName(path)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                StringComparison.OrdinalIgnoreCase));
+        {
+            var dir = Normalize(Path.GetDirectoryName(path) ?? string.Empty).TrimEnd('/');
+            return string.Equals(dir, normalizedDir, StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     public void MoveFile(string sourcePath, string destPath)
     {
-        _files.Remove(sourcePath);
-        _files[destPath] = true;
+        _files.Remove(Normalize(sourcePath));
+        _files[Normalize(destPath)] = true;
         MoveCallCount++;
     }
 
-    public bool FileExists(string path) => _files.ContainsKey(path);
+    public bool FileExists(string path) => _files.ContainsKey(Normalize(path));
 
     public string GetFileName(string path) => Path.GetFileName(path) ?? path;
 
-    public string Combine(string dir, string filename) => Path.Combine(dir, filename);
+    public string Combine(string dir, string filename) =>
+        Normalize(dir).TrimEnd('/') + "/" + filename;
+
+    private static string Normalize(string path) => path.Replace('\\', '/');
 }

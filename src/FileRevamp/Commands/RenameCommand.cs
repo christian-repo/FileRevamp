@@ -65,6 +65,8 @@ public sealed class RenameCommand : Command<RenameSettings>
 
         // Parse --replace operands into ReplaceTransform instances.
         // Format: "old->new" — split on first "->".
+        // Track whether any operand failed to parse; return exit code 1 if so (CR-01).
+        var replaceParseError = false;
         var replaceTransforms = (settings.ReplaceOperations ?? Array.Empty<string>())
             .Select(op =>
             {
@@ -75,12 +77,16 @@ public sealed class RenameCommand : Command<RenameSettings>
                 catch (ArgumentException ex)
                 {
                     _console.MarkupLine($"[red]Invalid --replace operand '{Markup.Escape(op)}': {Markup.Escape(ex.Message)}[/]");
+                    replaceParseError = true;
                     return null;
                 }
             })
             .Where(t => t is not null)
             .Cast<ReplaceTransform>()
             .ToList();
+
+        if (replaceParseError)
+            return 1;
 
         var reporter = new Reporter();
         var orchestrator = new RenameOrchestrator(fileSystem);

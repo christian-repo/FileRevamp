@@ -48,6 +48,13 @@ public sealed class Reporter
     /// Returns null if the name is valid; returns a human-readable error message otherwise.
     /// Addresses Pitfall 6 (trailing dots/spaces silently stripped by Win32 API).
     /// </summary>
+    private static readonly HashSet<string> WindowsReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+
     public static string? ValidateOutputName(string filename)
     {
         if (string.IsNullOrEmpty(filename))
@@ -58,6 +65,17 @@ public sealed class Reporter
 
         if (filename.EndsWith(' '))
             return $"Computed filename has trailing space: '{filename}'";
+
+        // CR-03: Prevent renaming to an extension-only name (e.g. ".csv") which creates a
+        // hidden/inaccessible file. This occurs when remove patterns erase the entire stem.
+        var stem = Path.GetFileNameWithoutExtension(filename);
+        if (string.IsNullOrEmpty(stem))
+            return $"Computed filename has empty stem (would produce extension-only file): '{filename}'";
+
+        // WR-04: Reject Windows reserved device names (CON, NUL, COM1, etc.) which cannot
+        // be created as regular files and are permanently inaccessible through normal APIs.
+        if (WindowsReservedNames.Contains(stem))
+            return $"Computed filename '{filename}' uses a Windows reserved device name";
 
         return null;
     }

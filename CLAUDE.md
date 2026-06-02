@@ -43,7 +43,7 @@ dotnet test --filter Category=Unit
 - Once code is completed and before pushing code to the remote repository, do a complete check in all files for private keys, API keys, personal emails, anything that can be considered personal and should not be in a remote public repository.
 - On phase complete: gh pr create --base main --fill → output PR URL → STOP
 - Do not start the next phase without explicit human approval
-- When starting a new phase and after successful confirmation the PR has been merged, delete the feature branch used and create a new one for the next phase.
+- When starting a new phase: automatically (without asking) fetch origin/main, delete the previous feature branch, and create feature/phase-{N}-{slug} from main. Do not wait for the user to request this.
 - Load @git-workflow skill at the start of every phase
 
 <!-- GSD:project-start source:PROJECT.md -->

@@ -15,6 +15,7 @@ internal sealed class TypeRegistrar : ITypeRegistrar
 {
     private readonly Dictionary<Type, Type> _registrations = new();
     private readonly Dictionary<Type, object> _instances = new();
+    private readonly Dictionary<Type, Lazy<object>> _lazyInstances = new();
 
     public void Register(Type service, Type implementation)
     {
@@ -28,14 +29,17 @@ internal sealed class TypeRegistrar : ITypeRegistrar
 
     public void RegisterLazy(Type service, Func<object> factory)
     {
-        _instances[service] = factory();
+        // WR-01: Defer factory evaluation to first Resolve() call so construction happens
+        // at first-use, not at registration time. Lazy<T> guarantees at-most-once evaluation.
+        _lazyInstances[service] = new Lazy<object>(factory);
     }
 
     public ITypeResolver Build()
     {
         return new TypeResolver(
             new Dictionary<Type, Type>(_registrations),
-            new Dictionary<Type, object>(_instances));
+            new Dictionary<Type, object>(_instances),
+            new Dictionary<Type, Lazy<object>>(_lazyInstances));
     }
 }
 
@@ -46,11 +50,16 @@ internal sealed class TypeResolver : ITypeResolver, IDisposable
 {
     private readonly Dictionary<Type, Type> _registrations;
     private readonly Dictionary<Type, object> _instances;
+    private readonly Dictionary<Type, Lazy<object>> _lazyInstances;
 
-    public TypeResolver(Dictionary<Type, Type> registrations, Dictionary<Type, object> instances)
+    public TypeResolver(
+        Dictionary<Type, Type> registrations,
+        Dictionary<Type, object> instances,
+        Dictionary<Type, Lazy<object>> lazyInstances)
     {
         _registrations = registrations;
         _instances = instances;
+        _lazyInstances = lazyInstances;
     }
 
     public object? Resolve(Type? type)
@@ -61,6 +70,10 @@ internal sealed class TypeResolver : ITypeResolver, IDisposable
         // Custom singleton instances take highest priority (e.g., IAnsiConsole → AnsiConsole.Console)
         if (_instances.TryGetValue(type, out var instance))
             return instance;
+
+        // Lazy instances evaluated at first Resolve() call (WR-01: deferred construction)
+        if (_lazyInstances.TryGetValue(type, out var lazy))
+            return lazy.Value;
 
         // Spectre-registered concrete types (e.g., IEnumerable<IHelpProvider> → List<IHelpProvider>)
         if (_registrations.TryGetValue(type, out var implType))

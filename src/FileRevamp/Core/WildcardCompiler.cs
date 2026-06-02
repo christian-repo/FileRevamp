@@ -43,9 +43,12 @@ public static class WildcardCompiler
         // Step 2: Replace the escaped brace-token sequences with regex quantifiers.
         //         After Regex.Escape, the pattern {*} becomes \{\*} (closing } is NOT escaped by Regex.Escape)
         //         Verified: Regex.Escape("{*}") == @"\{\*}"
+        //         Non-greedy quantifiers (CR-02): ensures the FIRST occurrence of a trailing literal
+        //         anchors the removal, not the last — e.g. _{*}new_{*} on _a_new_b_new_c removes _a_,
+        //         not _a_new_b_.
         var substituted = escaped
-            .Replace(@"\{\*}", "(.*)")
-            .Replace(@"\{\+}", "(.+)")
+            .Replace(@"\{\*}", "(.*?)")
+            .Replace(@"\{\+}", "(.+?)")
             .Replace(@"\{\?}", "(.?)");
 
         // Step 3: Optionally wrap in anchors so the pattern matches the full string, not a substring.

@@ -433,7 +433,7 @@ public IReadOnlyList<RenameResult> Execute(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Windows auto-numbering format: `file(1).csv` vs `file (1).csv` (space before paren)?**
    - What we know: Roadmap/REQUIREMENTS.md explicitly specifies `file(1).csv` (no space)

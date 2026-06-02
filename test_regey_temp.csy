@@ -1,0 +1,3 @@
+using System.Text.RegularExpressions;
+var escaped = Regex.Escape("{*}");
+Console.WriteLine($"Escaped = '{escaped}'");

@@ -93,7 +93,16 @@ public sealed class WildcardPatternMatcher
             if (matchRegex.IsMatch(currentStem))
             {
                 // Wildcard or full-stem-matching pattern: use the computed replacement.
-                currentStem = matchRegex.Replace(currentStem, replacement);
+                var result = matchRegex.Replace(currentStem, replacement);
+
+                // WR-02 / CR-03: If the anchored replacement consumed the entire stem and
+                // there is an extension, returning the extension alone would create a
+                // hidden/inaccessible file (e.g. ".csv"). Treat this as a non-match so the
+                // orchestrator skips the file rather than producing an extension-only name.
+                if (result.Length == 0 && extension.Length > 0)
+                    return null;
+
+                currentStem = result;
                 anyMatch = true;
             }
             else if (removeRegex.IsMatch(currentStem))

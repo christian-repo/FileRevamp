@@ -105,7 +105,7 @@ public sealed class RenameCommand : Command<RenameSettings>
 
         if (settings.DryRun)
         {
-            _console.MarkupLine(Markup.Escape(reporter.FormatDryRunComplete()));
+            _console.MarkupLine(Markup.Escape(reporter.FormatDryRunComplete(results)));
         }
         else
         {

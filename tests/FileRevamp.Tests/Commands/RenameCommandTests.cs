@@ -84,7 +84,9 @@ public sealed class RenameCommandTests : IDisposable
 
         result.ExitCode.Should().Be(0);
         result.Output.Should().Contain("[DRY RUN]");
-        result.Output.Should().Contain("Dry run complete — 0 files modified.");
+        result.Output.Should().Contain("Dry run complete");
+        result.Output.Should().Contain("0 files modified");
+        result.Output.Should().Contain("would be renamed");
 
         // File must still have its original name (dry-run = no modification)
         File.Exists(Path.Combine(tempDir, "report_new_data.csv")).Should().BeTrue();

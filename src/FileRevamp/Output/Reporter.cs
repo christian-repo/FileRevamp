@@ -38,10 +38,17 @@ public sealed class Reporter
     }
 
     /// <summary>
-    /// Returns the dry-run completion message.
+    /// Returns the dry-run completion message including counts of would-be renames,
+    /// skips, and failures (WR-05: dry-run now reports scope, not just "0 files modified").
     /// </summary>
-    public string FormatDryRunComplete() =>
-        "Dry run complete — 0 files modified.";
+    public string FormatDryRunComplete(IEnumerable<RenameResult> results)
+    {
+        var list = results.ToList();
+        var wouldRename = list.Count(r => r.Status == RenameStatus.DryRun);
+        var skipped = list.Count(r => r.Status == RenameStatus.Skipped);
+        var failed = list.Count(r => r.Status == RenameStatus.Failed);
+        return $"Dry run complete — {wouldRename} would be renamed, {skipped} skipped, {failed} failed. 0 files modified.";
+    }
 
     /// <summary>
     /// Validates that a computed output filename is safe to use on Windows.

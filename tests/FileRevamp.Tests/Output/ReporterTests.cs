@@ -80,10 +80,26 @@ public class ReporterTests
     }
 
     [Fact]
-    public void FormatDryRunComplete_ContainsDryRunCompleteAndZeroFilesModified()
+    public void FormatDryRunComplete_NoResults_ShowsZeroCountsAndZeroFilesModified()
     {
-        var msg = _reporter.FormatDryRunComplete();
+        var msg = _reporter.FormatDryRunComplete(Enumerable.Empty<RenameResult>());
         msg.Should().Contain("Dry run complete");
+        msg.Should().Contain("0 files modified");
+        msg.Should().Contain("0 would be renamed");
+    }
+
+    [Fact]
+    public void FormatDryRunComplete_WithResults_ShowsCorrectWouldRenameCount()
+    {
+        var results = new List<RenameResult>
+        {
+            RenameResult.DryRunResult("a.csv", "b.csv"),
+            RenameResult.DryRunResult("c.csv", "d.csv"),
+            RenameResult.SkippedResult("e.csv", "no match"),
+        };
+        var msg = _reporter.FormatDryRunComplete(results);
+        msg.Should().Contain("2 would be renamed");
+        msg.Should().Contain("1 skipped");
         msg.Should().Contain("0 files modified");
     }
 

@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can specify a replace transform (e.g. `.` to `-`) and substitutions are applied after all removes
   5. Running with --dry-run displays every before/after pair prefixed with `[DRY RUN]` and exits with zero files modified; running without --dry-run renames files and displays the same before/after pairs live, followed by a succeeded/failed summary count
 
-**Plans**: 3 plansPlans:
+**Plans**: 3 plans
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Walking Skeleton: project scaffold, IFileSystem seam, WildcardCompiler, RenameCommand --help, E2E dry-run test
@@ -61,7 +61,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. When any rename fails at runtime, a plain-text log file appears in the target directory listing each failed filename and its failure reason
   4. Running `filerevamp -help` displays usage instructions with at least one concrete wildcard pattern example and one replace example
 
-**Plans**: TBD
+**Plans**: 2 plans
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Two-pass orchestrator: RenameProposal record, CollisionResolver (SAFE-01, SAFE-02), refactored RenameOrchestrator Plan()+Execute()
+
+**Wave 2**
+
+- [ ] 02-02-PLAN.md — Failure logger and command wiring: FailureLogger, RenameCommand two-pass wiring + log exclusion, help text polish (RPRT-03, UX-01)
+
 **UI hint**: no
 
 ### Phase 3: Polish and Packaging
@@ -87,5 +95,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
-| 2. Safety and Reporting | 0/? | Not started | - |
+| 2. Safety and Reporting | 0/2 | Not started | - |
 | 3. Polish and Packaging | 0/? | Not started | - |

@@ -24,6 +24,10 @@ public sealed class ReplaceTransform
     /// <param name="replace">The literal string to replace with (may be empty to delete occurrences).</param>
     public ReplaceTransform(string find, string replace)
     {
+        // WR-03: Reject an empty find string early. string.Replace("", ...) throws
+        // ArgumentException at runtime; failing here gives a clearer error message.
+        if (string.IsNullOrEmpty(find))
+            throw new ArgumentException("Find string must not be empty.", nameof(find));
         Find = find;
         Replace = replace;
     }
@@ -68,6 +72,11 @@ public sealed class ReplaceTransform
         }
 
         var find = operand[..separatorIndex];
+        if (find.Length == 0)
+            throw new ArgumentException(
+                "Find string must not be empty. Use format 'old->new', e.g. '.->-'.",
+                nameof(operand));
+
         var replace = operand[(separatorIndex + separator.Length)..];
 
         return new ReplaceTransform(find, replace);

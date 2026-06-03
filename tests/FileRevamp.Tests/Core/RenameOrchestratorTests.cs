@@ -10,159 +10,216 @@ public class RenameOrchestratorTests
 
     /// <summary>
     /// DryRun scenario: file matches pattern, MoveFile must NOT be called.
-    /// Expected: Status=DryRun, NewName="_foo_.csv", MoveCallCount=0
     /// </summary>
     [Fact]
-    public void Execute_DryRun_MatchingFile_ReturnsDryRunResult_NoMoveCall()
+    public void Plan_Execute_DryRun_MatchingFile_ReturnsDryRunResult_NoMoveCall()
     {
-        // Arrange
         var fs = new MockFileSystem(new[] { "/exports/_foo_new_bar.csv" });
+        var filePaths = new List<string> { "/exports/_foo_new_bar.csv" };
         var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        // Act
-        var results = orchestrator.Execute(ExportsDir, null, matcher, Array.Empty<ReplaceTransform>(), dryRun: true).ToList();
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
-        // Assert
+        earlyResults.Should().BeEmpty();
         results.Should().HaveCount(1);
-        var result = results[0];
-        result.Status.Should().Be(RenameStatus.DryRun);
-        result.OriginalName.Should().Be("_foo_new_bar.csv");
-        result.NewName.Should().Be("_foo_.csv");
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("_foo_new_bar.csv");
+        results[0].NewName.Should().Be("_foo_.csv");
         fs.MoveCallCount.Should().Be(0, because: "dry run must not touch any files");
     }
 
     /// <summary>
-    /// Skipped scenario: file does NOT match pattern.
-    /// Expected: Status=Skipped, MoveCallCount=0
+    /// Skipped scenario: file does NOT match pattern — ends up in earlyResults, not proposals.
     /// </summary>
     [Fact]
-    public void Execute_DryRun_NonMatchingFile_ReturnsSkippedResult_NoMoveCall()
+    public void Plan_Execute_DryRun_NonMatchingFile_ReturnsSkippedInEarlyResults()
     {
-        // Arrange
         var fs = new MockFileSystem(new[] { "/exports/report.final.csv" });
+        var filePaths = new List<string> { "/exports/report.final.csv" };
         var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        // Act
-        var results = orchestrator.Execute(ExportsDir, null, matcher, Array.Empty<ReplaceTransform>(), dryRun: true).ToList();
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
 
-        // Assert
-        results.Should().HaveCount(1);
-        results[0].Status.Should().Be(RenameStatus.Skipped);
-        fs.MoveCallCount.Should().Be(0, because: "no file matched; nothing to move");
+        proposals.Should().BeEmpty(because: "non-matching file never becomes a proposal");
+        earlyResults.Should().HaveCount(1);
+        earlyResults[0].Status.Should().Be(RenameStatus.Skipped);
+        fs.MoveCallCount.Should().Be(0);
     }
 
     /// <summary>
     /// Live rename scenario: file matches, dryRun=false → MoveFile must be called once.
-    /// Expected: Status=Renamed, MoveCallCount=1, source no longer exists, dest exists.
     /// </summary>
     [Fact]
-    public void Execute_LiveRun_MatchingFile_ReturnsRenamedResult_MovesFile()
+    public void Plan_Execute_LiveRename_MatchingFile_CallsMoveOnce()
     {
-        // Arrange
         var fs = new MockFileSystem(new[] { "/exports/_foo_new_bar.csv" });
+        var filePaths = new List<string> { "/exports/_foo_new_bar.csv" };
         var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        // Act
-        var results = orchestrator.Execute(ExportsDir, null, matcher, Array.Empty<ReplaceTransform>(), dryRun: false).ToList();
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: false);
 
-        // Assert
         results.Should().HaveCount(1);
         results[0].Status.Should().Be(RenameStatus.Renamed);
         results[0].OriginalName.Should().Be("_foo_new_bar.csv");
         results[0].NewName.Should().Be("_foo_.csv");
         fs.MoveCallCount.Should().Be(1, because: "live run must rename the file");
-        fs.FileExists("/exports/_foo_new_bar.csv").Should().BeFalse(
-            because: "original file should no longer exist after rename");
-        fs.FileExists("/exports/_foo_.csv").Should().BeTrue(
-            because: "renamed file should now exist at destination path");
+        fs.FileExists("/exports/_foo_new_bar.csv").Should().BeFalse(because: "original must no longer exist");
+        fs.FileExists("/exports/_foo_.csv").Should().BeTrue(because: "renamed file must exist at destination");
     }
 
-    // ── New tests added in Plan 02 ─────────────────────────────────────────────────
-
     /// <summary>
-    /// Test A: Remove "_new" (literal) from "file_new_name.csv" → "file_name.csv", DryRun, MoveCallCount=0.
-    /// No replace transforms applied.
+    /// Remove literal "_new" from "file_new_name.csv" → "file_name.csv", DryRun.
     /// </summary>
     [Fact]
-    public void Execute_RemoveLiteral_DryRun_RemovesSubstringNoMove()
+    public void Plan_Execute_RemoveLiteral_DryRun_RemovesSubstringNoMove()
     {
-        // Arrange
         var fs = new MockFileSystem(new[] { "/exports/file_new_name.csv" });
+        var filePaths = new List<string> { "/exports/file_new_name.csv" };
         var matcher = new WildcardPatternMatcher(new[] { "_new" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        // Act
-        var results = orchestrator.Execute(
-            ExportsDir, null, matcher, Array.Empty<ReplaceTransform>(), dryRun: true).ToList();
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
-        // Assert
         results.Should().HaveCount(1);
-        var result = results[0];
-        result.Status.Should().Be(RenameStatus.DryRun);
-        result.OriginalName.Should().Be("file_new_name.csv");
-        result.NewName.Should().Be("file_name.csv");
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("file_new_name.csv");
+        results[0].NewName.Should().Be("file_name.csv");
         fs.MoveCallCount.Should().Be(0, because: "dry run must not touch any files");
     }
 
     /// <summary>
-    /// Test B: Remove "_new" then replace ".->-" on "file_new_name.csv" → "file_name-csv", DryRun.
-    /// Verifies that removes happen first, then replace applies to the post-remove result.
+    /// Remove "_new" then replace ".->-" on "file_new_name.csv" → "file_name-csv", DryRun.
+    /// Verifies removes happen first, then replace applies to the post-remove result.
     /// </summary>
     [Fact]
-    public void Execute_RemoveThenReplace_DryRun_AppliesReplaceAfterRemove()
+    public void Plan_Execute_RemoveThenReplace_DryRun_AppliesReplaceAfterRemove()
     {
-        // Arrange
         var fs = new MockFileSystem(new[] { "/exports/file_new_name.csv" });
+        var filePaths = new List<string> { "/exports/file_new_name.csv" };
         var matcher = new WildcardPatternMatcher(new[] { "_new" });
         var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse(".->-") };
         var orchestrator = new RenameOrchestrator(fs);
 
-        // Act
-        var results = orchestrator.Execute(
-            ExportsDir, null, matcher, replaces, dryRun: true).ToList();
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
-        // Assert
         results.Should().HaveCount(1);
-        var result = results[0];
-        result.Status.Should().Be(RenameStatus.DryRun);
-        result.OriginalName.Should().Be("file_new_name.csv");
-        // After remove "_new": "file_name.csv"
-        // After replace "." → "-": "file_name-csv"
-        result.NewName.Should().Be("file_name-csv");
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("file_new_name.csv");
+        // After remove "_new": "file_name.csv"  →  after replace "."->"- ": "file_name-csv"
+        results[0].NewName.Should().Be("file_name-csv");
         fs.MoveCallCount.Should().Be(0, because: "dry run must not touch any files");
     }
 
     /// <summary>
-    /// Test C (PAT-03 operation order): Remove fires BEFORE replace.
+    /// PAT-03 operation order: removes fire BEFORE replaces.
     /// Remove ".new" from "report.new.2024.csv" → "report.2024.csv",
-    /// then replace "." with "-" → "report-2024-csv".
-    /// If replace had run first, result would be "report-new-2024-csv" — incorrect.
+    /// then replace "." → "-" → "report-2024-csv".
     /// </summary>
     [Fact]
-    public void Execute_OperationOrder_RemoveBeforeReplace_ProducesCorrectResult()
+    public void Plan_Execute_OperationOrder_RemovesThenReplaces()
     {
-        // Arrange
         var fs = new MockFileSystem(new[] { "/exports/report.new.2024.csv" });
+        var filePaths = new List<string> { "/exports/report.new.2024.csv" };
         var matcher = new WildcardPatternMatcher(new[] { ".new" });
         var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse(".->-") };
         var orchestrator = new RenameOrchestrator(fs);
 
-        // Act
-        var results = orchestrator.Execute(
-            ExportsDir, null, matcher, replaces, dryRun: true).ToList();
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
-        // Assert
         results.Should().HaveCount(1);
-        var result = results[0];
-        result.Status.Should().Be(RenameStatus.DryRun);
-        result.OriginalName.Should().Be("report.new.2024.csv");
-        // Remove ".new" first: "report.2024.csv"
-        // Replace "." → "-": "report-2024-csv"
-        // NOT "report-new-2024-csv" (which would mean replace ran first)
-        result.NewName.Should().Be("report-2024-csv");
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("report.new.2024.csv");
+        // Remove ".new" first → "report.2024.csv"  →  replace "." → "-" → "report-2024-csv"
+        results[0].NewName.Should().Be("report-2024-csv");
+    }
+
+    // ── Phase 2 collision tests ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Two files that both transform to "report.csv" — first gets "report.csv",
+    /// second gets auto-numbered "report(1).csv". Both appear in proposals.
+    /// </summary>
+    [Fact]
+    public void Plan_TwoFilesComputeSameName_BothProposals_SecondHasNumberedName()
+    {
+        var fs = new MockFileSystem(new[] { "/exports/prefix_report.csv", "/exports/suffix_report.csv" });
+        var filePaths = new List<string> { "/exports/prefix_report.csv", "/exports/suffix_report.csv" };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var replaces = new List<ReplaceTransform>
+        {
+            ReplaceTransform.Parse("prefix_->"),
+            ReplaceTransform.Parse("suffix_->")
+        };
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+
+        earlyResults.Should().BeEmpty();
+        proposals.Should().HaveCount(2);
+        proposals[0].ResolvedName.Should().Be("report.csv",
+            because: "first file gets the desired name when free");
+        proposals[1].ResolvedName.Should().Be("report(1).csv",
+            because: "second file gets an auto-numbered name when the desired name is already claimed");
+    }
+
+    /// <summary>
+    /// Dry-run with two colliding files — both resolved names appear in output,
+    /// one base and one auto-numbered. No files are moved.
+    /// </summary>
+    [Fact]
+    public void Plan_TwoFilesComputeSameName_DryRun_BothShowResolvedNames()
+    {
+        var fs = new MockFileSystem(new[] { "/exports/prefix_report.csv", "/exports/suffix_report.csv" });
+        var filePaths = new List<string> { "/exports/prefix_report.csv", "/exports/suffix_report.csv" };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var replaces = new List<ReplaceTransform>
+        {
+            ReplaceTransform.Parse("prefix_->"),
+            ReplaceTransform.Parse("suffix_->")
+        };
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
+
+        earlyResults.Should().BeEmpty();
+        results.Should().HaveCount(2);
+        results.Should().Contain(r => r.NewName == "report.csv" && r.Status == RenameStatus.DryRun);
+        results.Should().Contain(r => r.NewName == "report(1).csv" && r.Status == RenameStatus.DryRun);
         fs.MoveCallCount.Should().Be(0, because: "dry run must not touch any files");
+    }
+
+    /// <summary>
+    /// Verifies the two-pass contract: Plan() must not call MoveFile; only Execute() does.
+    /// After Plan(): MoveCallCount=0. After Execute(): MoveCallCount=2 (both proposals executed).
+    /// </summary>
+    [Fact]
+    public void Execute_NoMoveCalledBeforePlanCompletes()
+    {
+        var fs = new MockFileSystem(new[] { "/exports/prefix_report.csv", "/exports/suffix_report.csv" });
+        var filePaths = new List<string> { "/exports/prefix_report.csv", "/exports/suffix_report.csv" };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var replaces = new List<ReplaceTransform>
+        {
+            ReplaceTransform.Parse("prefix_->"),
+            ReplaceTransform.Parse("suffix_->")
+        };
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+
+        fs.MoveCallCount.Should().Be(0, because: "Plan() must not touch the file system");
+
+        orchestrator.Execute(proposals, ExportsDir, dryRun: false);
+
+        fs.MoveCallCount.Should().Be(2, because: "Execute() must rename all planned proposals");
     }
 }

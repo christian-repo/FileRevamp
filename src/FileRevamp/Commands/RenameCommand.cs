@@ -91,10 +91,11 @@ public sealed class RenameCommand : Command<RenameSettings>
         var reporter = new Reporter();
         var orchestrator = new RenameOrchestrator(fileSystem);
 
-        // Materialize results into a list so we can write the summary after all per-file lines.
-        // TODO(Phase 2): stream results for large batches to avoid holding all in memory.
-        var results = orchestrator.Execute(directoryPath, globPattern, patternMatcher, replaceTransforms, settings.DryRun)
-            .ToList();
+        // FileDiscovery runs in the command; Plan() receives the resolved file list (SAFE-01).
+        // Plan 02 adds: rename-failures.log exclusion filter + FailureLogger wiring.
+        var filePaths = new FileDiscovery(fileSystem).GetFiles(directoryPath, globPattern).ToList();
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, patternMatcher, replaceTransforms, directoryPath);
+        var results = earlyResults.Concat(orchestrator.Execute(proposals, directoryPath, settings.DryRun)).ToList();
 
         foreach (var result in results)
         {

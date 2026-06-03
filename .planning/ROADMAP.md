@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Rename Pipeline** - Targeting, transforms, dry-run, per-file output, and summary working end-to-end *(completed 2026-05-31)*
 - [x] **Phase 2: Safety and Reporting** - Pre-flight conflict detection, auto-numbering, error log file, and -help command (completed 2026-06-03)
-- [ ] **Phase 3: Polish and Packaging** - dotnet global tool packaging, integration tests, and edge-case hardening
+- [x] **Phase 3: Polish and Packaging** - dotnet global tool packaging, integration tests, and edge-case hardening (completed 2026-06-03)
 
 ## Phase Details
 
@@ -99,7 +99,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4**
 
-- [ ] 03-04-PLAN.md — Install verification checkpoint: dotnet pack + global install + human confirms filerevamp --version from new shell
+- [x] 03-04-PLAN.md — Install verification checkpoint: dotnet pack + global install + human confirms filerevamp --version from new shell
 
 **UI hint**: no
 
@@ -112,4 +112,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
 | 2. Safety and Reporting | 2/2 | Complete | 2026-06-03 |
-| 3. Polish and Packaging | 3/4 | In Progress|  |
+| 3. Polish and Packaging | 4/4 | Complete   | 2026-06-03 |

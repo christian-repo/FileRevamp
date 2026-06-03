@@ -91,7 +91,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2**
 
-- [ ] 03-02-PLAN.md — IFileSystem injection seam in RenameCommand + package metadata in csproj
+- [x] 03-02-PLAN.md — IFileSystem injection seam in RenameCommand + package metadata in csproj
 
 **Wave 3**
 
@@ -112,4 +112,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
 | 2. Safety and Reporting | 2/2 | Complete | 2026-06-03 |
-| 3. Polish and Packaging | 1/4 | In Progress|  |
+| 3. Polish and Packaging | 2/4 | In Progress|  |

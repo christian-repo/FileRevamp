@@ -21,19 +21,16 @@ A file renaming operation must be predictable and reversible: show the user exac
 - [x] User can preview all renames with `--dry-run` without touching any files
 - [x] At end of run, a summary is displayed: count of successful renames and count of failures
 
+*Validated in Phase 2: Safety and Reporting*
+
+- [x] When renamed file already exists, tool auto-numbers the new name (e.g. `file(1).csv`) — two-pass Plan()+Execute() with CollisionResolver; pre-flight before any MoveFile call
+- [x] On failure, a log file is created in the target folder showing filename and failure reason — lazy FailureLogger; never created if all renames succeed; excluded from rename batch
+- [x] User can view usage and examples via `--help` flag — wildcard (`{*}`) and replace (`->`) examples via `AddExample`; `--version` via `SetApplicationVersion("1.0.0")`
+
 ### Active
 
-- [ ] User can rename files by passing a directory path or glob pattern as the target
-- [ ] User can specify remove operations using simplified wildcard syntax (e.g. `_{*}new_{*}`)
 - [ ] User can specify remove/match operations using full regex via `--advanced` flag
-- [ ] User can specify replace/transform operations (e.g. replace `.` with `-`)
-- [ ] Rename operations apply in fixed order: removes first, then replacements
-- [ ] User can preview all renames with `--dry-run` without touching any files
 - [ ] User can recurse into subdirectories with `--recursive` flag
-- [ ] When renamed file already exists, tool auto-numbers the new name (e.g. `file(1).csv`)
-- [ ] On failure, a log file is created in the target folder showing filename and failure reason
-- [ ] At end of run, a summary is displayed: count of successful renames and count of failures
-- [ ] User can view usage and examples via `-help` flag
 
 ### Out of Scope
 
@@ -81,4 +78,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after Phase 1 completion*
+*Last updated: 2026-06-02 after Phase 2 completion*

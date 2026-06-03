@@ -31,6 +31,14 @@ public sealed class RenameSettings : CommandSettings
     /// </summary>
     public override ValidationResult Validate()
     {
+        // WR-03: Require at least one --remove pattern or --replace operand.
+        if ((RemovePatterns is null || RemovePatterns.Length == 0) &&
+            (ReplaceOperations is null || ReplaceOperations.Length == 0))
+        {
+            return ValidationResult.Error(
+                "Specify at least one --remove pattern or --replace operand.");
+        }
+
         if (RemovePatterns is null)
             return ValidationResult.Success();
 

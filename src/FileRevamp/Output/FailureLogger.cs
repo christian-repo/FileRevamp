@@ -28,7 +28,7 @@ public sealed class FailureLogger
     /// </summary>
     public void Log(string originalName, string reason)
     {
-        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] FAIL {originalName}: {reason}";
+        var line = $"[{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}Z] FAIL {originalName}: {reason}";
         File.AppendAllText(_logFilePath, line + Environment.NewLine);
     }
 }

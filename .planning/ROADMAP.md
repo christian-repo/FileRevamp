@@ -95,7 +95,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3**
 
-- [ ] 03-03-PLAN.md — Edge-case integration tests: literal dots/parens, batch collision live run, log-file exclusion variant, empty directory, unicode filenames, long filenames
+- [x] 03-03-PLAN.md — Edge-case integration tests: literal dots/parens, batch collision live run, log-file exclusion variant, empty directory, unicode filenames, long filenames
 
 **Wave 4**
 
@@ -112,4 +112,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
 | 2. Safety and Reporting | 2/2 | Complete | 2026-06-03 |
-| 3. Polish and Packaging | 2/4 | In Progress|  |
+| 3. Polish and Packaging | 3/4 | In Progress|  |

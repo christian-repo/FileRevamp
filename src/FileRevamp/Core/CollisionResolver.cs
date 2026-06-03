@@ -47,7 +47,8 @@ public sealed class CollisionResolver
         var stem = Path.GetFileNameWithoutExtension(desiredName);
         var ext = Path.GetExtension(desiredName);   // includes leading dot, or "" if no extension
 
-        for (var i = 1; ; i++)
+        const int MaxAttempts = 9999;
+        for (var i = 1; i <= MaxAttempts; i++)
         {
             var candidate = $"{stem}({i}){ext}";
             var candidatePath = _fileSystem.Combine(directoryPath, candidate);
@@ -57,5 +58,8 @@ public sealed class CollisionResolver
                 return candidate;
             }
         }
+
+        throw new InvalidOperationException(
+            $"Could not find a free collision-resolution slot for '{desiredName}' after {MaxAttempts} attempts.");
     }
 }

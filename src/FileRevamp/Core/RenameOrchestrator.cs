@@ -116,7 +116,8 @@ public sealed class RenameOrchestrator
             }
 
             // Resolve collision: checks both the in-batch claimed set and disk (T-04-01).
-            var resolvedName = resolver.Resolve(directoryPath, newFilename, claimed);
+            // Use normalizedDir (absolute) to keep FileExists checks consistent with path-traversal guard.
+            var resolvedName = resolver.Resolve(normalizedDir, newFilename, claimed);
             proposals.Add(new RenameProposal(filePath, filename, resolvedName, WouldChange: true));
         }
 

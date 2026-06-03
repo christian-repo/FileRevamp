@@ -1,4 +1,5 @@
 using FileRevamp.Core;
+using FileRevamp.Tests.Fakes;
 using FluentAssertions;
 
 namespace FileRevamp.Tests.Core;

@@ -1,5 +1,6 @@
 using FileRevamp.Core;
 using FileRevamp.Output;
+using FileRevamp.Tests.Fakes;
 using FluentAssertions;
 
 namespace FileRevamp.Tests.Core;

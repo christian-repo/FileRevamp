@@ -14,7 +14,7 @@ FileRevamp ships in three phases. Phase 1 builds the rename pipeline end-to-end 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Rename Pipeline** - Targeting, transforms, dry-run, per-file output, and summary working end-to-end *(completed 2026-05-31)*
-- [ ] **Phase 2: Safety and Reporting** - Pre-flight conflict detection, auto-numbering, error log file, and -help command
+- [x] **Phase 2: Safety and Reporting** - Pre-flight conflict detection, auto-numbering, error log file, and -help command (completed 2026-06-03)
 - [ ] **Phase 3: Polish and Packaging** - dotnet global tool packaging, integration tests, and edge-case hardening
 
 ## Phase Details
@@ -64,11 +64,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Two-pass orchestrator: RenameProposal record, CollisionResolver (SAFE-01, SAFE-02), refactored RenameOrchestrator Plan()+Execute()
+- [x] 02-01-PLAN.md — Two-pass orchestrator: RenameProposal record, CollisionResolver (SAFE-01, SAFE-02), refactored RenameOrchestrator Plan()+Execute()
 
 **Wave 2**
 
-- [ ] 02-02-PLAN.md — Failure logger and command wiring: FailureLogger, RenameCommand two-pass wiring + log exclusion, help text polish (RPRT-03, UX-01)
+- [x] 02-02-PLAN.md — Failure logger and command wiring: FailureLogger, RenameCommand two-pass wiring + log exclusion, help text polish (RPRT-03, UX-01)
 
 **UI hint**: no
 
@@ -95,5 +95,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
-| 2. Safety and Reporting | 0/2 | Not started | - |
+| 2. Safety and Reporting | 2/2 | Complete   | 2026-06-03 |
 | 3. Polish and Packaging | 0/? | Not started | - |

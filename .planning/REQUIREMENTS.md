@@ -23,18 +23,18 @@
 
 ### Safety
 
-- [ ] **SAFE-01**: Tool validates the entire rename batch before touching any file (pre-flight); no file is renamed if any collision is detected
-- [ ] **SAFE-02**: When the computed output name already exists, tool auto-numbers the new name using Windows convention — e.g. `file(1).csv`, `file(2).csv`
+- [x] **SAFE-01**: Tool validates the entire rename batch before touching any file (pre-flight); no file is renamed if any collision is detected
+- [x] **SAFE-02**: When the computed output name already exists, tool auto-numbers the new name using Windows convention — e.g. `file(1).csv`, `file(2).csv`
 
 ### Output & Reporting
 
 - [x] **RPRT-01**: Tool displays each rename as it runs — source filename → destination filename (or `[DRY RUN]` prefix in dry-run mode)
 - [x] **RPRT-02**: At end of run, tool displays a summary: total files processed, succeeded, and failed
-- [ ] **RPRT-03**: On any failure, tool creates a log file in the target directory listing each failed filename and the reason
+- [x] **RPRT-03**: On any failure, tool creates a log file in the target directory listing each failed filename and the reason
 
 ### User Experience
 
-- [ ] **UX-01**: User can run `filerevamp -help` to display usage instructions and pattern examples
+- [x] **UX-01**: User can run `filerevamp -help` to display usage instructions and pattern examples
 
 ## v2 Requirements
 
@@ -85,10 +85,10 @@ Updated during roadmap creation — 2026-05-31.
 | EXEC-02 | Phase 1 | Complete |
 | RPRT-01 | Phase 1 | Complete |
 | RPRT-02 | Phase 1 | Complete |
-| SAFE-01 | Phase 2 | Pending |
-| SAFE-02 | Phase 2 | Pending |
-| RPRT-03 | Phase 2 | Pending |
-| UX-01 | Phase 2 | Pending |
+| SAFE-01 | Phase 2 | Complete |
+| SAFE-02 | Phase 2 | Complete |
+| RPRT-03 | Phase 2 | Complete |
+| UX-01 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total

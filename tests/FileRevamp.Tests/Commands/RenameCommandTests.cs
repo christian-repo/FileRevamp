@@ -61,7 +61,7 @@ public sealed class RenameCommandTests : IDisposable
         return dir;
     }
 
-    // Test 1 — --help exits 0 and describes flags
+    // Test 1 — --help exits 0 and describes flags, and shows wildcard and replace examples (UX-01)
     [Fact]
     public void Help_ExitsZero_AndDescribesFlagsAndSyntax()
     {
@@ -71,6 +71,8 @@ public sealed class RenameCommandTests : IDisposable
         result.ExitCode.Should().Be(0);
         result.Output.Should().Contain("--remove");
         result.Output.Should().Contain("--dry-run");
+        result.Output.Should().Contain("{*}", because: "help must show a wildcard pattern example (UX-01)");
+        result.Output.Should().Contain("->", because: "help must show a replace example (UX-01)");
     }
 
     // Test 2 — dry-run shows [DRY RUN] lines and "Dry run complete" but leaves files untouched
@@ -141,5 +143,56 @@ public sealed class RenameCommandTests : IDisposable
         result.ExitCode.Should().Be(0);
         result.Output.Should().Contain("Renamed: 1");
         result.Output.Should().Contain("Skipped: 1");
+    }
+
+    // Test 6 — dry-run with two colliding files shows both auto-numbered resolved names (SAFE-01, SAFE-02)
+    [Fact]
+    public void DryRun_WithCollision_ShowsAutoNumberedNamesInOutput()
+    {
+        // prefix_report.csv → replace "prefix_" with "" → report.csv
+        // suffix_report.csv → replace "suffix_" with "" → report.csv  (collision → report(1).csv)
+        var tempDir = CreateTempDir("prefix_report.csv", "suffix_report.csv");
+        var tester = CreateTester();
+
+        var result = tester.Run(
+            tempDir, "--replace", "prefix_->", "--replace", "suffix_->", "--dry-run");
+
+        result.ExitCode.Should().Be(0);
+        result.Output.Should().Contain("report.csv", because: "first file gets the base resolved name");
+        result.Output.Should().Contain("report(1).csv", because: "second colliding file is auto-numbered");
+    }
+
+    // Test 7 — runtime failure creates rename-failures.log in target directory (RPRT-03)
+    [Fact]
+    public void LiveRun_FailingRename_CreatesLogFile()
+    {
+        // Replace ".csv" with "." produces "report." which has a trailing dot — ValidateOutputName fails.
+        var tempDir = CreateTempDir("report.csv");
+        var tester = CreateTester();
+
+        var result = tester.Run(tempDir, "--replace", ".csv->.");
+
+        result.ExitCode.Should().Be(1, because: "at least one file failed");
+        var logPath = Path.Combine(tempDir, "rename-failures.log");
+        File.Exists(logPath).Should().BeTrue(because: "failure log must be created when a rename fails (RPRT-03)");
+        File.ReadAllText(logPath).Should().Contain("report.csv", because: "log must name the failed file");
+    }
+
+    // Test 8 — rename-failures.log in directory is excluded from the batch (RPRT-03 Pitfall 3)
+    [Fact]
+    public void LiveRun_LogFileInDirectory_IsExcludedFromBatch()
+    {
+        // Pre-existing log file + a normal file that WOULD match the pattern
+        var tempDir = CreateTempDir("rename-failures.log", "file_new.csv");
+        var tester = CreateTester();
+
+        var result = tester.Run(tempDir, "--remove", "_new");
+
+        result.ExitCode.Should().Be(0);
+        // Log file must not appear in output as a rename candidate
+        result.Output.Should().NotContain("rename-failures.log → ",
+            because: "the log file must be excluded from the rename batch");
+        // Normal file is processed
+        result.Output.Should().Contain("file_new.csv");
     }
 }

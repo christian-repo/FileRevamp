@@ -5,6 +5,7 @@ var app = new CommandApp<RenameCommand>();
 app.Configure(config =>
 {
     config.SetApplicationName("filerevamp");
+    config.SetApplicationVersion("1.0.0");
 
     config.AddExample(".", "--remove", "_{*}new_{*}", "--dry-run");
     config.AddExample("./exports", "--remove", "_{*}new_{*}", "--replace", ".->-");

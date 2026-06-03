@@ -7,7 +7,10 @@ namespace FileRevamp.Tests.Core;
 
 public class RenameOrchestratorTests
 {
-    private const string ExportsDir = "/exports";
+    private static readonly string ExportsDir =
+        Path.Combine(Path.GetTempPath(), "filerevamp_test_exports");
+
+    private static string F(string filename) => Path.Combine(ExportsDir, filename);
 
     /// <summary>
     /// DryRun scenario: file matches pattern, MoveFile must NOT be called.
@@ -15,8 +18,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_Execute_DryRun_MatchingFile_ReturnsDryRunResult_NoMoveCall()
     {
-        var fs = new MockFileSystem(new[] { "/exports/_foo_new_bar.csv" });
-        var filePaths = new List<string> { "/exports/_foo_new_bar.csv" };
+        var fs = new MockFileSystem(new[] { F("_foo_new_bar.csv") });
+        var filePaths = new List<string> { F("_foo_new_bar.csv") };
         var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
         var orchestrator = new RenameOrchestrator(fs);
 
@@ -37,8 +40,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_Execute_DryRun_NonMatchingFile_ReturnsSkippedInEarlyResults()
     {
-        var fs = new MockFileSystem(new[] { "/exports/report.final.csv" });
-        var filePaths = new List<string> { "/exports/report.final.csv" };
+        var fs = new MockFileSystem(new[] { F("report.final.csv") });
+        var filePaths = new List<string> { F("report.final.csv") };
         var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
         var orchestrator = new RenameOrchestrator(fs);
 
@@ -56,8 +59,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_Execute_LiveRename_MatchingFile_CallsMoveOnce()
     {
-        var fs = new MockFileSystem(new[] { "/exports/_foo_new_bar.csv" });
-        var filePaths = new List<string> { "/exports/_foo_new_bar.csv" };
+        var fs = new MockFileSystem(new[] { F("_foo_new_bar.csv") });
+        var filePaths = new List<string> { F("_foo_new_bar.csv") };
         var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
         var orchestrator = new RenameOrchestrator(fs);
 
@@ -69,8 +72,8 @@ public class RenameOrchestratorTests
         results[0].OriginalName.Should().Be("_foo_new_bar.csv");
         results[0].NewName.Should().Be("_foo_.csv");
         fs.MoveCallCount.Should().Be(1, because: "live run must rename the file");
-        fs.FileExists("/exports/_foo_new_bar.csv").Should().BeFalse(because: "original must no longer exist");
-        fs.FileExists("/exports/_foo_.csv").Should().BeTrue(because: "renamed file must exist at destination");
+        fs.FileExists(F("_foo_new_bar.csv")).Should().BeFalse(because: "original must no longer exist");
+        fs.FileExists(F("_foo_.csv")).Should().BeTrue(because: "renamed file must exist at destination");
     }
 
     /// <summary>
@@ -79,8 +82,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_Execute_RemoveLiteral_DryRun_RemovesSubstringNoMove()
     {
-        var fs = new MockFileSystem(new[] { "/exports/file_new_name.csv" });
-        var filePaths = new List<string> { "/exports/file_new_name.csv" };
+        var fs = new MockFileSystem(new[] { F("file_new_name.csv") });
+        var filePaths = new List<string> { F("file_new_name.csv") };
         var matcher = new WildcardPatternMatcher(new[] { "_new" });
         var orchestrator = new RenameOrchestrator(fs);
 
@@ -101,8 +104,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_Execute_RemoveThenReplace_DryRun_AppliesReplaceAfterRemove()
     {
-        var fs = new MockFileSystem(new[] { "/exports/file_new_name.csv" });
-        var filePaths = new List<string> { "/exports/file_new_name.csv" };
+        var fs = new MockFileSystem(new[] { F("file_new_name.csv") });
+        var filePaths = new List<string> { F("file_new_name.csv") };
         var matcher = new WildcardPatternMatcher(new[] { "_new" });
         var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse(".->-") };
         var orchestrator = new RenameOrchestrator(fs);
@@ -126,8 +129,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_Execute_OperationOrder_RemovesThenReplaces()
     {
-        var fs = new MockFileSystem(new[] { "/exports/report.new.2024.csv" });
-        var filePaths = new List<string> { "/exports/report.new.2024.csv" };
+        var fs = new MockFileSystem(new[] { F("report.new.2024.csv") });
+        var filePaths = new List<string> { F("report.new.2024.csv") };
         var matcher = new WildcardPatternMatcher(new[] { ".new" });
         var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse(".->-") };
         var orchestrator = new RenameOrchestrator(fs);
@@ -151,8 +154,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_TwoFilesComputeSameName_BothProposals_SecondHasNumberedName()
     {
-        var fs = new MockFileSystem(new[] { "/exports/prefix_report.csv", "/exports/suffix_report.csv" });
-        var filePaths = new List<string> { "/exports/prefix_report.csv", "/exports/suffix_report.csv" };
+        var fs = new MockFileSystem(new[] { F("prefix_report.csv"), F("suffix_report.csv") });
+        var filePaths = new List<string> { F("prefix_report.csv"), F("suffix_report.csv") };
         var matcher = new WildcardPatternMatcher(Array.Empty<string>());
         var replaces = new List<ReplaceTransform>
         {
@@ -178,8 +181,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Plan_TwoFilesComputeSameName_DryRun_BothShowResolvedNames()
     {
-        var fs = new MockFileSystem(new[] { "/exports/prefix_report.csv", "/exports/suffix_report.csv" });
-        var filePaths = new List<string> { "/exports/prefix_report.csv", "/exports/suffix_report.csv" };
+        var fs = new MockFileSystem(new[] { F("prefix_report.csv"), F("suffix_report.csv") });
+        var filePaths = new List<string> { F("prefix_report.csv"), F("suffix_report.csv") };
         var matcher = new WildcardPatternMatcher(Array.Empty<string>());
         var replaces = new List<ReplaceTransform>
         {
@@ -205,8 +208,8 @@ public class RenameOrchestratorTests
     [Fact]
     public void Execute_NoMoveCalledBeforePlanCompletes()
     {
-        var fs = new MockFileSystem(new[] { "/exports/prefix_report.csv", "/exports/suffix_report.csv" });
-        var filePaths = new List<string> { "/exports/prefix_report.csv", "/exports/suffix_report.csv" };
+        var fs = new MockFileSystem(new[] { F("prefix_report.csv"), F("suffix_report.csv") });
+        var filePaths = new List<string> { F("prefix_report.csv"), F("suffix_report.csv") };
         var matcher = new WildcardPatternMatcher(Array.Empty<string>());
         var replaces = new List<ReplaceTransform>
         {

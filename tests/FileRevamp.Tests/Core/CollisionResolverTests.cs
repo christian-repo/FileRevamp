@@ -6,7 +6,8 @@ namespace FileRevamp.Tests.Core;
 
 public class CollisionResolverTests
 {
-    private const string ExportsDir = "/exports";
+    private static readonly string ExportsDir =
+        Path.Combine(Path.GetTempPath(), "filerevamp_test_exports");
 
     /// <summary>
     /// Free name scenario: desired name is not on disk and not claimed.
@@ -56,7 +57,7 @@ public class CollisionResolverTests
     public void Resolve_DesiredNameOnDisk_ReturnsNumbered()
     {
         // Arrange — report.csv already exists on disk
-        var fs = new MockFileSystem(new[] { "/exports/report.csv" });
+        var fs = new MockFileSystem(new[] { Path.Combine(ExportsDir, "report.csv") });
         var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var resolver = new CollisionResolver(fs);
 
@@ -98,7 +99,11 @@ public class CollisionResolverTests
     public void Resolve_SlotOneOccupied_ReturnsTwoSuffix()
     {
         // Arrange — both report.csv and report(1).csv exist on disk
-        var fs = new MockFileSystem(new[] { "/exports/report.csv", "/exports/report(1).csv" });
+        var fs = new MockFileSystem(new[]
+        {
+            Path.Combine(ExportsDir, "report.csv"),
+            Path.Combine(ExportsDir, "report(1).csv")
+        });
         var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var resolver = new CollisionResolver(fs);
 
@@ -137,10 +142,11 @@ public class CollisionResolverTests
     public void RenameProposal_Constructor_AllPropertiesAccessible()
     {
         // Act
-        var proposal = new RenameProposal("/exports/a.csv", "a.csv", "report.csv", WouldChange: true);
+        var proposal = new RenameProposal(
+            Path.Combine(ExportsDir, "a.csv"), "a.csv", "report.csv", WouldChange: true);
 
         // Assert
-        proposal.SourcePath.Should().Be("/exports/a.csv");
+        proposal.SourcePath.Should().Be(Path.Combine(ExportsDir, "a.csv"));
         proposal.OriginalName.Should().Be("a.csv");
         proposal.ResolvedName.Should().Be("report.csv");
         proposal.WouldChange.Should().BeTrue();

@@ -87,7 +87,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Codebase hardening: move MockFileSystem to test assembly, fix cross-platform test paths, assembly-derived version, UTC log timestamps, no-op validation guard
+- [x] 03-01-PLAN.md — Codebase hardening: move MockFileSystem to test assembly, fix cross-platform test paths, assembly-derived version, UTC log timestamps, no-op validation guard
 
 **Wave 2**
 
@@ -112,4 +112,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
 | 2. Safety and Reporting | 2/2 | Complete | 2026-06-03 |
-| 3. Polish and Packaging | 0/4 | Not started | - |
+| 3. Polish and Packaging | 1/4 | In Progress|  |

@@ -13,16 +13,18 @@ namespace FileRevamp.Commands;
 public sealed class RenameCommand : Command<RenameSettings>
 {
     private readonly IAnsiConsole _console;
+    private readonly IFileSystem? _injectedFileSystem;
 
     /// <summary>
-    /// Initializes RenameCommand with an optional injected IAnsiConsole.
-    /// When <paramref name="console"/> is null (production, no DI registrar), falls back to
-    /// AnsiConsole.Console (the global terminal). When injected (tests), uses the provided
-    /// instance so CommandAppTester can capture output.
+    /// Initializes RenameCommand with optional injected IAnsiConsole and IFileSystem.
+    /// When <paramref name="console"/> is null (production), falls back to AnsiConsole.Console.
+    /// When <paramref name="fileSystem"/> is null (production), the dry-run flag selects the
+    /// implementation. Non-null fileSystem is only supplied by tests (MockFileSystem injection).
     /// </summary>
-    public RenameCommand(IAnsiConsole? console = null)
+    public RenameCommand(IAnsiConsole? console = null, IFileSystem? fileSystem = null)
     {
         _console = console ?? AnsiConsole.Console;
+        _injectedFileSystem = fileSystem;
     }
 
     protected override int Execute(CommandContext context, RenameSettings settings, CancellationToken cancellationToken = default)
@@ -55,10 +57,10 @@ public sealed class RenameCommand : Command<RenameSettings>
             return 0;
         }
 
-        // Choose the file system implementation based on dry-run flag.
-        IFileSystem fileSystem = settings.DryRun
-            ? new DryRunFileSystem()
-            : new FileSystem();
+        // _injectedFileSystem is non-null only in tests (in-memory MockFileSystem).
+        // In production it is always null and the dry-run flag selects the implementation.
+        IFileSystem fileSystem = _injectedFileSystem
+            ?? (settings.DryRun ? new DryRunFileSystem() : new FileSystem());
 
         var patternMatcher = new WildcardPatternMatcher(
             settings.RemovePatterns ?? Array.Empty<string>());

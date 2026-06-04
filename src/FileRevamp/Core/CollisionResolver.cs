@@ -3,29 +3,47 @@ namespace FileRevamp.Core;
 /// <summary>
 /// Resolves filename collisions using Windows-style auto-numbering: file.csv → file(1).csv → file(2).csv → …
 ///
-/// Checks both the in-batch claimed set (intra-batch duplicates) and <see cref="IFileSystem.FileExists"/>
-/// (existing files on disk) before assigning a destination name.
+/// Checks both the in-batch claimed destinations set (intra-batch duplicates) and
+/// <see cref="IFileSystem.FileExists"/> (existing files on disk) before assigning a destination name.
 ///
-/// The <paramref name="claimed"/> set passed to <see cref="Resolve"/> is mutated in place — each resolved
-/// name is added to <paramref name="claimed"/> before returning so that subsequent calls for the same
+/// Source filenames are supplied via <paramref name="sourceNames"/> so that the resolver can
+/// distinguish a name that is "occupied by a source file about to vacate" from a name that is
+/// genuinely occupied by a pre-existing non-source file. Without this distinction, a batch rename
+/// where a source file's name equals a computed destination for another source file would produce a
+/// false-positive collision and silently auto-number the destination.
+///
+/// The <paramref name="claimedDestinations"/> set passed to <see cref="Resolve"/> is mutated in
+/// place — each resolved name is added before returning so that subsequent calls for the same
 /// desired name receive the next available slot.
 /// </summary>
 public sealed class CollisionResolver
 {
     private readonly IFileSystem _fileSystem;
+    private readonly HashSet<string> _sourceNames;
 
-    public CollisionResolver(IFileSystem fileSystem)
+    /// <summary>
+    /// Initialises a <see cref="CollisionResolver"/> with the set of source filenames that will
+    /// vacate their names during Execute. This prevents false-positive collisions when a computed
+    /// destination name matches a still-present source file that is part of the same batch.
+    /// </summary>
+    /// <param name="fileSystem">File system used for disk-existence checks.</param>
+    /// <param name="sourceNames">
+    /// The set of bare filenames (no directory component) of all source files in the batch.
+    /// Must use <see cref="StringComparer.OrdinalIgnoreCase"/>.
+    /// </param>
+    public CollisionResolver(IFileSystem fileSystem, HashSet<string> sourceNames)
     {
         _fileSystem = fileSystem;
+        _sourceNames = sourceNames;
     }
 
     /// <summary>
     /// Returns a collision-free filename for <paramref name="desiredName"/> in <paramref name="directoryPath"/>.
-    /// Adds the resolved name to <paramref name="claimed"/> before returning.
+    /// Adds the resolved name to <paramref name="claimedDestinations"/> before returning.
     /// </summary>
     /// <param name="directoryPath">Directory in which the rename will occur.</param>
     /// <param name="desiredName">The filename the pipeline wants to assign (no directory component).</param>
-    /// <param name="claimed">
+    /// <param name="claimedDestinations">
     /// In-batch set of already-assigned destination names.
     /// Must be constructed with <see cref="StringComparer.OrdinalIgnoreCase"/> by the caller.
     /// Mutated in place: the resolved name is added before this method returns.
@@ -33,13 +51,16 @@ public sealed class CollisionResolver
     /// <returns>
     /// <paramref name="desiredName"/> when it is free, or <c>stem(N).ext</c> for the lowest free N otherwise.
     /// </returns>
-    public string Resolve(string directoryPath, string desiredName, HashSet<string> claimed)
+    public string Resolve(string directoryPath, string desiredName, HashSet<string> claimedDestinations)
     {
-        // Fast path: desired name is free on disk and not yet claimed in this batch.
+        // Fast path: desired name is not already claimed as a destination in this batch, AND
+        // either (a) it does not exist on disk at all, or (b) it exists only because it is a
+        // source file that will vacate during Execute (not a pre-existing non-source file).
         var destPath = _fileSystem.Combine(directoryPath, desiredName);
-        if (!claimed.Contains(desiredName) && !_fileSystem.FileExists(destPath))
+        var diskOccupied = _fileSystem.FileExists(destPath) && !_sourceNames.Contains(desiredName);
+        if (!claimedDestinations.Contains(desiredName) && !diskOccupied)
         {
-            claimed.Add(desiredName);
+            claimedDestinations.Add(desiredName);
             return desiredName;
         }
 
@@ -52,9 +73,10 @@ public sealed class CollisionResolver
         {
             var candidate = $"{stem}({i}){ext}";
             var candidatePath = _fileSystem.Combine(directoryPath, candidate);
-            if (!claimed.Contains(candidate) && !_fileSystem.FileExists(candidatePath))
+            var candidateDiskOccupied = _fileSystem.FileExists(candidatePath) && !_sourceNames.Contains(candidate);
+            if (!claimedDestinations.Contains(candidate) && !candidateDiskOccupied)
             {
-                claimed.Add(candidate);
+                claimedDestinations.Add(candidate);
                 return candidate;
             }
         }

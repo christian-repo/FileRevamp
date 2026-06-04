@@ -48,8 +48,15 @@ public sealed class RenameOrchestrator
         var normalizedDir = Path.GetFullPath(directoryPath);
         var proposals = new List<RenameProposal>();
         var earlyResults = new List<RenameResult>();
-        var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var resolver = new CollisionResolver(_fileSystem);
+
+        // Seed sourceNames with all source filenames so CollisionResolver does not treat
+        // still-present source files as occupied destinations (CR-01 false-positive fix).
+        var sourceNames = new HashSet<string>(
+            filePaths.Select(p => _fileSystem.GetFileName(p)),
+            StringComparer.OrdinalIgnoreCase);
+
+        var claimedDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolver = new CollisionResolver(_fileSystem, sourceNames);
 
         foreach (var filePath in filePaths)
         {
@@ -115,9 +122,9 @@ public sealed class RenameOrchestrator
                 continue;
             }
 
-            // Resolve collision: checks both the in-batch claimed set and disk (T-04-01).
+            // Resolve collision: checks both the in-batch claimed destinations set and disk (T-04-01).
             // Use normalizedDir (absolute) to keep FileExists checks consistent with path-traversal guard.
-            var resolvedName = resolver.Resolve(normalizedDir, newFilename, claimed);
+            var resolvedName = resolver.Resolve(normalizedDir, newFilename, claimedDestinations);
             proposals.Add(new RenameProposal(filePath, filename, resolvedName, WouldChange: true));
         }
 

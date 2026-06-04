@@ -27,6 +27,12 @@ A file renaming operation must be predictable and reversible: show the user exac
 - [x] On failure, a log file is created in the target folder showing filename and failure reason — lazy FailureLogger; never created if all renames succeed; excluded from rename batch
 - [x] User can view usage and examples via `--help` flag — wildcard (`{*}`) and replace (`->`) examples via `AddExample`; `--version` via `SetApplicationVersion("1.0.0")`
 
+*Validated in Phase 3: Polish and Packaging*
+
+- [x] Tool installable as `dotnet tool install -g FileRevamp` and callable as `filerevamp` from any shell prompt — `filerevamp --version` returns `1.0.0.0`
+- [x] Edge cases handled: filenames with literal dots/parens in wildcard patterns, batch collisions (auto-numbered), log-file exclusion, empty directories, unicode filenames, long filenames (244 chars) — all 79 tests pass
+- [x] MockFileSystem lives in test assembly only; FailureLogger writes UTC timestamps; assembly version drives `--version`; no-op validation guard when no `--remove` or `--replace` provided
+
 ### Active
 
 - [ ] User can specify remove/match operations using full regex via `--advanced` flag
@@ -78,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after Phase 2 completion*
+*Last updated: 2026-06-03 after Phase 3 completion*

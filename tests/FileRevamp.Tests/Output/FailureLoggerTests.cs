@@ -104,7 +104,7 @@ public sealed class FailureLoggerTests : IDisposable
         // Assert
         var logPath = Path.Combine(tempDir, "rename-failures.log");
         var content = File.ReadAllText(logPath);
-        // Line must match: [YYYY-MM-DD HH:mm:ss] FAIL {name}: {reason}
-        content.Should().MatchRegex(@"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] FAIL data\.csv: Permission error");
+        // Line must match: [YYYY-MM-DD HH:mm:ssZ] FAIL {name}: {reason}
+        content.Should().MatchRegex(@"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}Z\] FAIL data\.csv: Permission error");
     }
 }

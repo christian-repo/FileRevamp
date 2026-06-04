@@ -1,10 +1,10 @@
-namespace FileRevamp.Core;
+namespace FileRevamp.Tests.Fakes;
 
 /// <summary>
 /// In-memory file system for unit tests. No disk access.
 /// Tracks MoveCallCount to allow assertions that dry-run does not move files.
 /// </summary>
-public sealed class MockFileSystem : IFileSystem
+public sealed class MockFileSystem : FileRevamp.Core.IFileSystem
 {
     private readonly Dictionary<string, bool> _files =
         new(StringComparer.OrdinalIgnoreCase);

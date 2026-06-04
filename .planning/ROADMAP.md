@@ -14,8 +14,8 @@ FileRevamp ships in three phases. Phase 1 builds the rename pipeline end-to-end 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Rename Pipeline** - Targeting, transforms, dry-run, per-file output, and summary working end-to-end *(completed 2026-05-31)*
-- [x] **Phase 2: Safety and Reporting** - Pre-flight conflict detection, auto-numbering, error log file, and -help command (completed 2026-06-03)
-- [ ] **Phase 3: Polish and Packaging** - dotnet global tool packaging, integration tests, and edge-case hardening
+- [x] **Phase 2: Safety and Reporting** - Pre-flight conflict detection, auto-numbering, error log file, and -help command (completed 2026-06-03)
+- [x] **Phase 3: Polish and Packaging** - dotnet global tool packaging, integration tests, and edge-case hardening (completed 2026-06-03)
 
 ## Phase Details
 
@@ -84,7 +84,23 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Integration tests cover the full rename pipeline end-to-end against an in-memory file system with no temp directory management required
   3. The tool handles documented edge cases without crashing: filenames with literal dots and parentheses in wildcard patterns, output names that collide within the same batch, and the log file itself is never included as a rename target
 
-**Plans**: TBD
+**Plans**: 4 plans
+**Wave 1**
+
+- [x] 03-01-PLAN.md — Codebase hardening: move MockFileSystem to test assembly, fix cross-platform test paths, assembly-derived version, UTC log timestamps, no-op validation guard
+
+**Wave 2**
+
+- [x] 03-02-PLAN.md — IFileSystem injection seam in RenameCommand + package metadata in csproj
+
+**Wave 3**
+
+- [x] 03-03-PLAN.md — Edge-case integration tests: literal dots/parens, batch collision live run, log-file exclusion variant, empty directory, unicode filenames, long filenames
+
+**Wave 4**
+
+- [x] 03-04-PLAN.md — Install verification checkpoint: dotnet pack + global install + human confirms filerevamp --version from new shell
+
 **UI hint**: no
 
 ## Progress
@@ -95,5 +111,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Rename Pipeline | 3/3 | Complete | 2026-05-31 |
-| 2. Safety and Reporting | 2/2 | Complete    | 2026-06-03 |
-| 3. Polish and Packaging | 0/? | Not started | - |
+| 2. Safety and Reporting | 2/2 | Complete | 2026-06-03 |
+| 3. Polish and Packaging | 4/4 | Complete    | 2026-06-04 |

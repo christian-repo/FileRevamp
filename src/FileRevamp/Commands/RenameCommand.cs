@@ -115,7 +115,15 @@ public sealed class RenameCommand : Command<RenameSettings>
         // Log failures to rename-failures.log (lazy — file not created when all renames succeed).
         foreach (var result in results.Where(r => r.Status == RenameStatus.Failed))
         {
-            failureLogger.Log(result.OriginalName, result.FailureReason ?? "Unknown error");
+            try
+            {
+                failureLogger.Log(result.OriginalName, result.FailureReason ?? "Unknown error");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _console.MarkupLine(
+                    $"[yellow]Warning: could not write to failure log: {Markup.Escape(ex.Message)}[/]");
+            }
         }
 
         if (settings.DryRun)

@@ -8,8 +8,8 @@ public sealed class DryRunFileSystem : IFileSystem
 {
     private readonly FileSystem _inner = new();
 
-    public IEnumerable<string> GetFiles(string directoryPath, string searchPattern) =>
-        _inner.GetFiles(directoryPath, searchPattern);
+    public IEnumerable<string> GetFiles(string directoryPath) =>
+        _inner.GetFiles(directoryPath);
 
     /// <summary>No-op: dry-run mode never modifies files.</summary>
     public void MoveFile(string sourcePath, string destPath)

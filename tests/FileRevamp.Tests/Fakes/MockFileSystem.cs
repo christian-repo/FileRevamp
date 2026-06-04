@@ -19,7 +19,7 @@ public sealed class MockFileSystem : FileRevamp.Core.IFileSystem
             _files[Normalize(path)] = true;
     }
 
-    public IEnumerable<string> GetFiles(string directoryPath, string searchPattern)
+    public IEnumerable<string> GetFiles(string directoryPath)
     {
         // Normalize separators to forward slash for comparison (tests use Unix-style paths).
         var normalizedDir = Normalize(directoryPath).TrimEnd('/');

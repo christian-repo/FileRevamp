@@ -108,7 +108,16 @@ public sealed class WildcardPatternMatcher
             else if (removeRegex.IsMatch(currentStem))
             {
                 // Literal/substring pattern: remove the matching substring.
-                currentStem = removeRegex.Replace(currentStem, string.Empty);
+                var afterRemove = removeRegex.Replace(currentStem, string.Empty);
+
+                // Guard: avoid extension-only result from unanchored removal (mirrors anchored-path guard above).
+                // If the removal consumed the entire stem and there is an extension, returning the extension
+                // alone would create a hidden/inaccessible file (e.g. ".csv"). Return null so the orchestrator
+                // skips the file consistently, regardless of whether the match was anchored or unanchored.
+                if (afterRemove.Length == 0 && extension.Length > 0)
+                    return null;
+
+                currentStem = afterRemove;
                 anyMatch = true;
             }
         }

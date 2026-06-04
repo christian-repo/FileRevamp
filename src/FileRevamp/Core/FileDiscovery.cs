@@ -40,12 +40,12 @@ public sealed class FileDiscovery
     {
         // When no filter is requested, return all files directly.
         if (string.IsNullOrEmpty(globPattern) || globPattern == "*")
-            return _fileSystem.GetFiles(directoryPath, "*");
+            return _fileSystem.GetFiles(directoryPath);
 
         // Use Microsoft.Extensions.FileSystemGlobbing.Matcher for non-trivial patterns.
         // Matcher.Match() accepts a base directory and a set of relative paths.
         // We pass filenames only (flat directory — no subdirectory traversal in Phase 1).
-        var allFiles = _fileSystem.GetFiles(directoryPath, "*").ToArray();
+        var allFiles = _fileSystem.GetFiles(directoryPath).ToArray();
         var fileNames = allFiles.Select(p => _fileSystem.GetFileName(p));
 
         var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);

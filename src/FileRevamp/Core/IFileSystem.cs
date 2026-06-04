@@ -6,8 +6,8 @@ namespace FileRevamp.Core;
 /// </summary>
 public interface IFileSystem
 {
-    /// <summary>Returns the full paths of all files in the given directory matching the search pattern.</summary>
-    IEnumerable<string> GetFiles(string directoryPath, string searchPattern);
+    /// <summary>Returns the full paths of all files in the given directory (non-recursive, all files).</summary>
+    IEnumerable<string> GetFiles(string directoryPath);
 
     /// <summary>Moves (renames) a file. In dry-run mode this is a no-op.</summary>
     void MoveFile(string sourcePath, string destPath);

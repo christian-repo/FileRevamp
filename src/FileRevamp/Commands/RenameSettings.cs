@@ -19,7 +19,7 @@ public sealed class RenameSettings : CommandSettings
     public string[]? RemovePatterns { get; init; }
 
     [CommandOption("--replace")]
-    [Description("Replace operation in the form old->new (e.g. .->- replaces dots with dashes). Can be specified multiple times. Applied after all --remove operations.")]
+    [Description("Replace operation in the form old->new (e.g. .->- replaces dots with dashes). The find string is case-sensitive. Can be specified multiple times. Applied after all --remove operations.")]
     public string[]? ReplaceOperations { get; init; }
 
     [CommandOption("--dry-run|-n")]

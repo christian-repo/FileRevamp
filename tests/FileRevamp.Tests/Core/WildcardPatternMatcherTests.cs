@@ -76,4 +76,41 @@ public class WildcardPatternMatcherTests
 
         result.Should().BeNull(because: "fully erasing the stem would produce the extension-only file '.csv'");
     }
+
+    /// <summary>
+    /// Regression coverage for issue #7: "_{*}new_{*}" must remove exactly the substring its
+    /// (lazy, leftmost-first) regex match spans — never corrupt the surrounding text.
+    ///
+    /// {*} is documented (see RenameSettings --remove help text and WildcardCompilerTests) as a
+    /// generic "any characters, zero-or-more, lazy" wildcard — NOT a per-character repetition
+    /// specifier. So "_{*}new_{*}" compiles to the unanchored, non-greedy regex "_(.*?)new_(.*?)"
+    /// and the leftmost-first match is removed: remove deletes exactly what the pattern
+    /// matches, mirroring literal-pattern behaviour (see the corrected ApplyRemoves above).
+    ///
+    /// Traced expectations (leftmost lazy match per input, replaced with ""):
+    ///   "_____new__Hello.txt"   -> match "_____new_" (the run of 5 leading underscores + "new_")
+    ///                              leaves "_Hello"        -> "_Hello.txt"
+    ///   "_new_Hello.txt"        -> match "_new_"          leaves "Hello"        -> "Hello.txt"
+    ///   "_new____Hello.txt"     -> match "_new_" (first "new_" found, lazy stops there)
+    ///                              leaves "___Hello"      -> "___Hello.txt"
+    ///   "__new__Hello_new_.txt" -> TWO non-overlapping matches ("__new_" then "_Hello_new_")
+    ///                              cover the entire stem -> WR-02/CR-03 guard -> null (unchanged)
+    ///   "_new-Hello.txt"        -> no "new_" substring exists ("new-" only) -> no match -> null (unchanged)
+    /// </summary>
+    [Theory]
+    [InlineData("_____new__Hello.txt", "_Hello.txt")]
+    [InlineData("_new_Hello.txt", "Hello.txt")]
+    [InlineData("_new____Hello.txt", "___Hello.txt")]
+    [InlineData("__new__Hello_new_.txt", null)]
+    [InlineData("_new-Hello.txt", null)]
+    public void ApplyRemoves_UnderscoreNewWildcardPattern_RemovesExactlyTheLazyLeftmostMatch(
+        string filename, string? expected)
+    {
+        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var result = matcher.ApplyRemoves(filename);
+
+        result.Should().Be(expected,
+            because: "remove must delete exactly the substring the lazy, leftmost-first regex match spans, " +
+                     "consistent with the documented {*} = 'any chars, zero-or-more, lazy' semantics");
+    }
 }

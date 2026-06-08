@@ -76,4 +76,34 @@ public class WildcardPatternMatcherTests
 
         result.Should().BeNull(because: "fully erasing the stem would produce the extension-only file '.csv'");
     }
+
+    /// <summary>
+    /// Patterns are passed to Regex verbatim — standard .NET regex quantifier and replace
+    /// semantics apply. Pattern "_.*?_" lazily matches the shortest "_..._" span, and
+    /// <see cref="Regex.Replace(string, string)"/> removes ALL non-overlapping matches, not
+    /// just the first. On "a_draft_b_final_c" this matches both "_draft_" and "_final_",
+    /// leaving "abc".
+    /// </summary>
+    [Fact]
+    public void ApplyRemoves_RegexLazyQuantifierPattern_RemovesAllNonOverlappingMatches()
+    {
+        var matcher = new WildcardPatternMatcher(new[] { "_.*?_" });
+        var result = matcher.ApplyRemoves("a_draft_b_final_c.txt");
+
+        result.Should().Be("abc.txt");
+    }
+
+    /// <summary>
+    /// The constructor rejects patterns that are not syntactically valid .NET regular
+    /// expressions, throwing ArgumentException with a message naming the offending pattern
+    /// (no wildcard translation is performed — patterns are passed to Regex verbatim).
+    /// </summary>
+    [Fact]
+    public void Constructor_InvalidRegexPattern_ThrowsArgumentExceptionWithExplanation()
+    {
+        var act = () => new WildcardPatternMatcher(new[] { "[unclosed" });
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*[unclosed*not a valid regular expression*");
+    }
 }

@@ -61,7 +61,7 @@ public sealed class RenameCommandTests : IDisposable
         return dir;
     }
 
-    // Test 1 — --help exits 0 and describes flags, and shows wildcard and replace examples (UX-01)
+    // Test 1 — --help exits 0 and describes flags, and shows regex and replace examples (UX-01)
     [Fact]
     public void Help_ExitsZero_AndDescribesFlagsAndSyntax()
     {
@@ -71,7 +71,7 @@ public sealed class RenameCommandTests : IDisposable
         result.ExitCode.Should().Be(0);
         result.Output.Should().Contain("--remove");
         result.Output.Should().Contain("--dry-run");
-        result.Output.Should().Contain("{*}", because: "help must show a wildcard pattern example (UX-01)");
+        result.Output.Should().Contain("_draft_", because: "help must show a raw regex pattern example (UX-01)");
         result.Output.Should().Contain("->", because: "help must show a replace example (UX-01)");
     }
 
@@ -114,19 +114,19 @@ public sealed class RenameCommandTests : IDisposable
         File.Exists(Path.Combine(tempDir, "report_new_data.csv")).Should().BeFalse();
     }
 
-    // Test 4 — bare asterisk in --remove produces targeted validation error
+    // Test 4 — an invalid raw-regex pattern in --remove produces a targeted validation error
     [Fact]
-    public void BareAsterisk_InRemovePattern_ProducesValidationError()
+    public void InvalidRegexPattern_InRemovePattern_ProducesValidationError()
     {
         var tester = CreateTester();
 
         var result = tester.Run(".", "--remove", "*suffix");
 
         result.ExitCode.Should().NotBe(0);
-        // Error message must mention {*} or "did you mean" to guide the user
+        // Error message must name the offending pattern and explain it is not valid regex
         var output = result.Output;
-        (output.Contains("{*}") || output.Contains("did you mean")).Should().BeTrue(
-            $"Expected output to contain '{{*}}' or 'did you mean', but got: {output}");
+        output.Should().Contain("*suffix");
+        output.Should().Contain("is not a valid regular expression");
     }
 
     // Test 5 — summary counts reflect actual results (1 renamed, 1 skipped)

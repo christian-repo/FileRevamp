@@ -20,7 +20,7 @@ public class RenameOrchestratorTests
     {
         var fs = new MockFileSystem(new[] { F("_foo_new_bar.csv") });
         var filePaths = new List<string> { F("_foo_new_bar.csv") };
-        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var matcher = new WildcardPatternMatcher(new[] { "new_.*" });
         var orchestrator = new RenameOrchestrator(fs);
 
         var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
@@ -42,7 +42,7 @@ public class RenameOrchestratorTests
     {
         var fs = new MockFileSystem(new[] { F("report.final.csv") });
         var filePaths = new List<string> { F("report.final.csv") };
-        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var matcher = new WildcardPatternMatcher(new[] { "new_.*" });
         var orchestrator = new RenameOrchestrator(fs);
 
         var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
@@ -61,7 +61,7 @@ public class RenameOrchestratorTests
     {
         var fs = new MockFileSystem(new[] { F("_foo_new_bar.csv") });
         var filePaths = new List<string> { F("_foo_new_bar.csv") };
-        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var matcher = new WildcardPatternMatcher(new[] { "new_.*" });
         var orchestrator = new RenameOrchestrator(fs);
 
         var (proposals, _) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);

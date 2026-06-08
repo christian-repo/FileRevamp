@@ -20,7 +20,7 @@ public class RenameOrchestratorTests
     {
         var fs = new MockFileSystem(new[] { F("_foo_new_bar.csv") });
         var filePaths = new List<string> { F("_foo_new_bar.csv") };
-        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var matcher = new WildcardPatternMatcher(new[] { "_.*?new_" });
         var orchestrator = new RenameOrchestrator(fs);
 
         var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
@@ -30,9 +30,7 @@ public class RenameOrchestratorTests
         results.Should().HaveCount(1);
         results[0].Status.Should().Be(RenameStatus.DryRun);
         results[0].OriginalName.Should().Be("_foo_new_bar.csv");
-        // "_{*}new_{*}" -> unanchored "_(.*?)new_(.*?)"; the lazy leftmost match spans
-        // "_foo_new_" (stops at the first "new_"), leaving "bar" (issue #7 fix —
-        // remove deletes exactly what it matches, it never keeps part of the matched text).
+        // Raw regex "_.*?new_": lazy match spans "_foo_new_" (stops at first "new_"), leaving "bar".
         results[0].NewName.Should().Be("bar.csv");
         fs.MoveCallCount.Should().Be(0, because: "dry run must not touch any files");
     }
@@ -45,7 +43,7 @@ public class RenameOrchestratorTests
     {
         var fs = new MockFileSystem(new[] { F("report.final.csv") });
         var filePaths = new List<string> { F("report.final.csv") };
-        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var matcher = new WildcardPatternMatcher(new[] { "new_.*" });
         var orchestrator = new RenameOrchestrator(fs);
 
         var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
@@ -64,7 +62,7 @@ public class RenameOrchestratorTests
     {
         var fs = new MockFileSystem(new[] { F("_foo_new_bar.csv") });
         var filePaths = new List<string> { F("_foo_new_bar.csv") };
-        var matcher = new WildcardPatternMatcher(new[] { "_{*}new_{*}" });
+        var matcher = new WildcardPatternMatcher(new[] { "_.*?new_" });
         var orchestrator = new RenameOrchestrator(fs);
 
         var (proposals, _) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
@@ -73,7 +71,7 @@ public class RenameOrchestratorTests
         results.Should().HaveCount(1);
         results[0].Status.Should().Be(RenameStatus.Renamed);
         results[0].OriginalName.Should().Be("_foo_new_bar.csv");
-        // See dry-run counterpart above for the lazy-leftmost-match trace: "_foo_new_" is removed, leaving "bar".
+        // Raw regex "_.*?new_": lazy match spans "_foo_new_", leaving "bar".
         results[0].NewName.Should().Be("bar.csv");
         fs.MoveCallCount.Should().Be(1, because: "live run must rename the file");
         fs.FileExists(F("_foo_new_bar.csv")).Should().BeFalse(because: "original must no longer exist");

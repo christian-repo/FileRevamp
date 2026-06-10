@@ -11,6 +11,9 @@ app.Configure(config =>
 
     config.AddExample(".", "--remove", "_draft_", "--dry-run");
     config.AddExample("./exports", "--remove", ".*?new_", "--replace", ".->-");
+    config.AddExample("./exports", "--removeBeg", "_{*}", "--dry-run");
+    config.AddExample("./exports", "--removeEnd", "_{*}");
+    config.AddExample("./exports", "--removeBeg", "_{*}new_{*}", "--removeEnd", "_{*}");
 });
 
 return app.Run(args);

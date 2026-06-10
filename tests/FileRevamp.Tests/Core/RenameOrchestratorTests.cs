@@ -12,6 +12,9 @@ public class RenameOrchestratorTests
 
     private static string F(string filename) => Path.Combine(ExportsDir, filename);
 
+    private static readonly AnchoredPatternMatcher NoAnchors =
+        new AnchoredPatternMatcher(Array.Empty<string>(), Array.Empty<string>());
+
     /// <summary>
     /// DryRun scenario: file matches pattern, MoveFile must NOT be called.
     /// </summary>
@@ -23,7 +26,7 @@ public class RenameOrchestratorTests
         var matcher = new WildcardPatternMatcher(new[] { "_.*?new_" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, NoAnchors, Array.Empty<ReplaceTransform>(), ExportsDir);
         var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
         earlyResults.Should().BeEmpty();
@@ -46,7 +49,7 @@ public class RenameOrchestratorTests
         var matcher = new WildcardPatternMatcher(new[] { "new_.*" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, NoAnchors, Array.Empty<ReplaceTransform>(), ExportsDir);
 
         proposals.Should().BeEmpty(because: "non-matching file never becomes a proposal");
         earlyResults.Should().HaveCount(1);
@@ -65,7 +68,7 @@ public class RenameOrchestratorTests
         var matcher = new WildcardPatternMatcher(new[] { "_.*?new_" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, _) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, NoAnchors, Array.Empty<ReplaceTransform>(), ExportsDir);
         var results = orchestrator.Execute(proposals, ExportsDir, dryRun: false);
 
         results.Should().HaveCount(1);
@@ -89,7 +92,7 @@ public class RenameOrchestratorTests
         var matcher = new WildcardPatternMatcher(new[] { "_new" });
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, _) = orchestrator.Plan(filePaths, matcher, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, NoAnchors, Array.Empty<ReplaceTransform>(), ExportsDir);
         var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
         results.Should().HaveCount(1);
@@ -112,7 +115,7 @@ public class RenameOrchestratorTests
         var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse(".->-") };
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, _) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, NoAnchors, replaces, ExportsDir);
         var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
         results.Should().HaveCount(1);
@@ -137,7 +140,7 @@ public class RenameOrchestratorTests
         var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse(".->-") };
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, _) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, NoAnchors, replaces, ExportsDir);
         var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
         results.Should().HaveCount(1);
@@ -166,7 +169,7 @@ public class RenameOrchestratorTests
         };
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, NoAnchors, replaces, ExportsDir);
 
         earlyResults.Should().BeEmpty();
         proposals.Should().HaveCount(2);
@@ -193,7 +196,7 @@ public class RenameOrchestratorTests
         };
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, NoAnchors, replaces, ExportsDir);
         var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
 
         earlyResults.Should().BeEmpty();
@@ -220,12 +223,130 @@ public class RenameOrchestratorTests
         };
         var orchestrator = new RenameOrchestrator(fs);
 
-        var (proposals, _) = orchestrator.Plan(filePaths, matcher, replaces, ExportsDir);
+        var (proposals, _) = orchestrator.Plan(filePaths, matcher, NoAnchors, replaces, ExportsDir);
 
         fs.MoveCallCount.Should().Be(0, because: "Plan() must not touch the file system");
 
         orchestrator.Execute(proposals, ExportsDir, dryRun: false);
 
         fs.MoveCallCount.Should().Be(2, because: "Execute() must rename all planned proposals");
+    }
+
+    // ── --removeBeg orchestrator tests ────────────────────────────────────────
+
+    /// <summary>
+    /// --removeBeg with wildcard token removes leading underscores from filename stem.
+    /// </summary>
+    [Fact]
+    public void Plan_Execute_RemoveBeg_WildcardToken_RemovesLeadingUnderscores_DryRun()
+    {
+        var fs = new MockFileSystem(new[] { F("___report.csv") });
+        var filePaths = new List<string> { F("___report.csv") };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var anchors = new AnchoredPatternMatcher(new[] { "_{*}" }, Array.Empty<string>());
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, anchors, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
+
+        earlyResults.Should().BeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("___report.csv");
+        results[0].NewName.Should().Be("report.csv");
+        fs.MoveCallCount.Should().Be(0);
+    }
+
+    /// <summary>
+    /// --removeBeg that would erase the entire stem produces a Skipped earlyResult, not a proposal.
+    /// </summary>
+    [Fact]
+    public void Plan_RemoveBeg_StemErasure_Skipped()
+    {
+        var fs = new MockFileSystem(new[] { F("_new.csv") });
+        var filePaths = new List<string> { F("_new.csv") };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var anchors = new AnchoredPatternMatcher(new[] { "_new" }, Array.Empty<string>());
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, anchors, Array.Empty<ReplaceTransform>(), ExportsDir);
+
+        proposals.Should().BeEmpty(because: "stem erasure must not become a proposal");
+        earlyResults.Should().HaveCount(1);
+        earlyResults[0].Status.Should().Be(RenameStatus.Skipped);
+        earlyResults[0].OriginalName.Should().Be("_new.csv");
+    }
+
+    // ── --removeEnd orchestrator tests ────────────────────────────────────────
+
+    /// <summary>
+    /// --removeEnd with wildcard token removes trailing underscores from filename stem.
+    /// </summary>
+    [Fact]
+    public void Plan_Execute_RemoveEnd_WildcardToken_RemovesTrailingUnderscores_DryRun()
+    {
+        var fs = new MockFileSystem(new[] { F("report___.csv") });
+        var filePaths = new List<string> { F("report___.csv") };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var anchors = new AnchoredPatternMatcher(Array.Empty<string>(), new[] { "_{*}" });
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, anchors, Array.Empty<ReplaceTransform>(), ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
+
+        earlyResults.Should().BeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("report___.csv");
+        results[0].NewName.Should().Be("report.csv");
+        fs.MoveCallCount.Should().Be(0);
+    }
+
+    /// <summary>
+    /// --removeEnd that would erase the entire stem produces a Skipped earlyResult.
+    /// </summary>
+    [Fact]
+    public void Plan_RemoveEnd_StemErasure_Skipped()
+    {
+        var fs = new MockFileSystem(new[] { F("report.csv") });
+        var filePaths = new List<string> { F("report.csv") };
+        var matcher = new WildcardPatternMatcher(Array.Empty<string>());
+        var anchors = new AnchoredPatternMatcher(Array.Empty<string>(), new[] { "report" });
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, anchors, Array.Empty<ReplaceTransform>(), ExportsDir);
+
+        proposals.Should().BeEmpty(because: "stem erasure must not become a proposal");
+        earlyResults.Should().HaveCount(1);
+        earlyResults[0].Status.Should().Be(RenameStatus.Skipped);
+    }
+
+    /// <summary>
+    /// PAT-03 order: --remove fires first, then --removeBeg, then --removeEnd, then --replace.
+    /// "_new_report_draft_" → remove "_new" → "_report_draft_" → removeBeg "_" → "report_draft_"
+    /// → removeEnd "_{*}" → "report_draft" → replace "_"->"" → "reportdraft"
+    /// </summary>
+    [Fact]
+    public void Plan_Execute_FullOperationOrder_AllFourSteps()
+    {
+        var fs = new MockFileSystem(new[] { F("_new_report_draft_.csv") });
+        var filePaths = new List<string> { F("_new_report_draft_.csv") };
+        var matcher = new WildcardPatternMatcher(new[] { "_new" });
+        var anchors = new AnchoredPatternMatcher(new[] { "_{*}" }, new[] { "_{*}" });
+        var replaces = new List<ReplaceTransform> { ReplaceTransform.Parse("_->") };
+        var orchestrator = new RenameOrchestrator(fs);
+
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, matcher, anchors, replaces, ExportsDir);
+        var results = orchestrator.Execute(proposals, ExportsDir, dryRun: true);
+
+        earlyResults.Should().BeEmpty();
+        results.Should().HaveCount(1);
+        results[0].Status.Should().Be(RenameStatus.DryRun);
+        results[0].OriginalName.Should().Be("_new_report_draft_.csv");
+        // remove "_new" → "_report_draft_"
+        // removeBeg "_+" → "report_draft_"
+        // removeEnd "_+" → "report_draft"
+        // replace "_" → "" → "reportdraft"
+        results[0].NewName.Should().Be("reportdraft.csv");
     }
 }

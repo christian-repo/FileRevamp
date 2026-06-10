@@ -30,7 +30,10 @@ public class RenameOrchestratorTests
         results.Should().HaveCount(1);
         results[0].Status.Should().Be(RenameStatus.DryRun);
         results[0].OriginalName.Should().Be("_foo_new_bar.csv");
-        results[0].NewName.Should().Be("_foo_.csv");
+        // "_{*}new_{*}" -> unanchored "_(.*?)new_(.*?)"; the lazy leftmost match spans
+        // "_foo_new_" (stops at the first "new_"), leaving "bar" (issue #7 fix —
+        // remove deletes exactly what it matches, it never keeps part of the matched text).
+        results[0].NewName.Should().Be("bar.csv");
         fs.MoveCallCount.Should().Be(0, because: "dry run must not touch any files");
     }
 
@@ -70,10 +73,11 @@ public class RenameOrchestratorTests
         results.Should().HaveCount(1);
         results[0].Status.Should().Be(RenameStatus.Renamed);
         results[0].OriginalName.Should().Be("_foo_new_bar.csv");
-        results[0].NewName.Should().Be("_foo_.csv");
+        // See dry-run counterpart above for the lazy-leftmost-match trace: "_foo_new_" is removed, leaving "bar".
+        results[0].NewName.Should().Be("bar.csv");
         fs.MoveCallCount.Should().Be(1, because: "live run must rename the file");
         fs.FileExists(F("_foo_new_bar.csv")).Should().BeFalse(because: "original must no longer exist");
-        fs.FileExists(F("_foo_.csv")).Should().BeTrue(because: "renamed file must exist at destination");
+        fs.FileExists(F("bar.csv")).Should().BeTrue(because: "renamed file must exist at destination");
     }
 
     /// <summary>

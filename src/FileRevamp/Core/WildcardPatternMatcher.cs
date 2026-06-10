@@ -5,55 +5,43 @@ namespace FileRevamp.Core;
 
 /// <summary>
 /// Applies one or more wildcard remove patterns to a filename string.
-/// Patterns are compiled via <see cref="WildcardCompiler"/> at construction time.
-///
-/// Each pattern is compiled TWICE:
-///   - Anchored regex (^...$): used as an IsMatch gate — does this pattern match the whole stem?
-///   - Unanchored regex: used for Regex.Replace to strip a matching substring.
-///
-/// Wildcard patterns (those containing {*}/{+}/{?}) use the BuildRemoveReplacement to
-/// preserve the literal prefix and first capture group (stem-level removal).
-/// Literal patterns (no wildcards) use empty-string replacement for substring removal.
+/// Patterns are compiled via <see cref="WildcardCompiler"/> at construction time into a
+/// single unanchored regex each — used to find and strip the matching substring, wherever
+/// it occurs in the stem. This is the same "find the matched span, delete it" semantic for
+/// BOTH wildcard patterns (e.g. "_{*}new_{*}") and pure literal patterns (e.g. "_new"):
+/// a remove pattern always means "delete the text this pattern matches", never "keep part
+/// of the matched text" (issue #7 — a previous "keep literal prefix + first capture"
+/// replacement scheme produced corrupted results such as "_____.txt").
 ///
 /// NFC normalization is applied to the filename stem before matching (Pitfall 10 mitigation).
 /// </summary>
 public sealed class WildcardPatternMatcher
 {
-    private readonly IReadOnlyList<(Regex MatchRegex, Regex RemoveRegex, string Replacement)> _patterns;
+    private readonly IReadOnlyList<Regex> _removeRegexes;
 
     /// <summary>
     /// Returns <see langword="true"/> when at least one remove pattern is registered.
     /// When this is <see langword="false"/>, the orchestrator applies replace transforms
     /// to ALL files in the directory (replace-only mode, no file filtering by pattern).
     /// </summary>
-    public bool HasPatterns => _patterns.Count > 0;
+    public bool HasPatterns => _removeRegexes.Count > 0;
 
     /// <summary>
-    /// Initialises the matcher, compiling each pattern via <see cref="WildcardCompiler.ToRegex"/>.
+    /// Initialises the matcher, compiling each pattern via <see cref="WildcardCompiler.ToRegex"/>
+    /// into an unanchored regex (matches the pattern anywhere in the stem).
     /// </summary>
     /// <param name="removePatterns">Zero or more wildcard patterns to remove from filenames.</param>
     public WildcardPatternMatcher(IEnumerable<string> removePatterns)
     {
-        _patterns = removePatterns
-            .Select(p =>
-            {
-                var matchRegex = WildcardCompiler.ToRegex(p, anchored: true);
-                var removeRegex = WildcardCompiler.ToRegex(p, anchored: false);
-                var replacement = WildcardCompiler.BuildRemoveReplacement(p);
-                return (matchRegex, removeRegex, replacement);
-            })
+        _removeRegexes = removePatterns
+            .Select(p => WildcardCompiler.ToRegex(p, anchored: false))
             .ToList()
             .AsReadOnly();
     }
 
     /// <summary>
-    /// Applies all remove patterns to the filename in order.
-    ///
-    /// For wildcard patterns (containing {*}/{+}/{?}): matched against the full stem using
-    /// the anchored regex; the replacement string preserves the literal prefix and first capture.
-    ///
-    /// For literal patterns (no wildcards): the unanchored regex removes the matching substring
-    /// from wherever it appears in the stem.
+    /// Applies all remove patterns to the filename in order. Each pattern that matches
+    /// anywhere in the current stem has its matched span deleted (replaced with "").
     ///
     /// The extension is always preserved separately so {*} cannot consume the dot separator.
     ///
@@ -80,46 +68,22 @@ public sealed class WildcardPatternMatcher
         var currentStem = stem;
         var anyMatch = false;
 
-        foreach (var (matchRegex, removeRegex, replacement) in _patterns)
+        foreach (var removeRegex in _removeRegexes)
         {
-            // Strategy:
-            //   1. Try the anchored match — does the pattern match the WHOLE current stem?
-            //      If yes, use the precomputed replacement (keeps literal prefix + $1 capture).
-            //   2. If anchored match fails, try unanchored — does it appear anywhere in the stem?
-            //      If yes, replace the matched substring with "".
-            // This dual approach supports both wildcard patterns (_{*}new_{*}) and
-            // literal patterns (_new) without changing the existing wildcard behavior.
+            if (!removeRegex.IsMatch(currentStem))
+                continue;
 
-            if (matchRegex.IsMatch(currentStem))
-            {
-                // Wildcard or full-stem-matching pattern: use the computed replacement.
-                var result = matchRegex.Replace(currentStem, replacement);
+            var afterRemove = removeRegex.Replace(currentStem, string.Empty);
 
-                // WR-02 / CR-03: If the anchored replacement consumed the entire stem and
-                // there is an extension, returning the extension alone would create a
-                // hidden/inaccessible file (e.g. ".csv"). Treat this as a non-match so the
-                // orchestrator skips the file rather than producing an extension-only name.
-                if (result.Length == 0 && extension.Length > 0)
-                    return null;
+            // WR-02 / CR-03: If the removal consumed the entire stem and there is an
+            // extension, returning the extension alone would create a hidden/inaccessible
+            // file (e.g. ".csv"). Treat this as a non-match so the orchestrator skips the
+            // file rather than producing an extension-only name.
+            if (afterRemove.Length == 0 && extension.Length > 0)
+                return null;
 
-                currentStem = result;
-                anyMatch = true;
-            }
-            else if (removeRegex.IsMatch(currentStem))
-            {
-                // Literal/substring pattern: remove the matching substring.
-                var afterRemove = removeRegex.Replace(currentStem, string.Empty);
-
-                // Guard: avoid extension-only result from unanchored removal (mirrors anchored-path guard above).
-                // If the removal consumed the entire stem and there is an extension, returning the extension
-                // alone would create a hidden/inaccessible file (e.g. ".csv"). Return null so the orchestrator
-                // skips the file consistently, regardless of whether the match was anchored or unanchored.
-                if (afterRemove.Length == 0 && extension.Length > 0)
-                    return null;
-
-                currentStem = afterRemove;
-                anyMatch = true;
-            }
+            currentStem = afterRemove;
+            anyMatch = true;
         }
 
         if (!anyMatch)

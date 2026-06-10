@@ -13,8 +13,10 @@ namespace FileRevamp.Core;
 /// live run calls MoveFile for each proposal.
 ///
 /// Operation order is fixed (PAT-03):
-///   1. Remove patterns (WildcardPatternMatcher.ApplyRemoves)
-///   2. Replace transforms (ReplaceTransform.Apply), applied in order
+///   1. Remove patterns      (WildcardPatternMatcher.ApplyRemoves)
+///   2. Remove-beg patterns  (AnchoredPatternMatcher.ApplyBegRemoves)
+///   3. Remove-end patterns  (AnchoredPatternMatcher.ApplyEndRemoves)
+///   4. Replace transforms   (ReplaceTransform.Apply), applied in order
 /// </summary>
 public sealed class RenameOrchestrator
 {
@@ -31,7 +33,8 @@ public sealed class RenameOrchestrator
     /// Execute() can act on a complete, validated plan.
     /// </summary>
     /// <param name="filePaths">Ordered list of full file paths to process (caller performs file discovery).</param>
-    /// <param name="patternMatcher">Compiled pattern matcher for remove operations.</param>
+    /// <param name="patternMatcher">Compiled pattern matcher for --remove operations.</param>
+    /// <param name="anchoredMatcher">Compiled anchored matcher for --removeBeg and --removeEnd operations.</param>
     /// <param name="replaceTransforms">Ordered list of literal find/replace transforms (PAT-03).</param>
     /// <param name="directoryPath">Absolute path to the directory — used for path traversal checks and collision resolution.</param>
     /// <returns>
@@ -42,6 +45,7 @@ public sealed class RenameOrchestrator
         Plan(
             IReadOnlyList<string> filePaths,
             WildcardPatternMatcher patternMatcher,
+            AnchoredPatternMatcher anchoredMatcher,
             IReadOnlyList<ReplaceTransform> replaceTransforms,
             string directoryPath)
     {
@@ -80,7 +84,31 @@ public sealed class RenameOrchestrator
                 newFilename = afterRemove;
             }
 
-            // Step 2: Apply replace transforms in order (PAT-02, PAT-03 — after removes)
+            // Step 2: Apply --removeBeg patterns (anchored to start of stem)
+            if (anchoredMatcher.HasBegPatterns)
+            {
+                var afterBeg = anchoredMatcher.ApplyBegRemoves(newFilename);
+                if (afterBeg is null)
+                {
+                    earlyResults.Add(RenameResult.SkippedResult(filename, "Pattern would erase filename stem"));
+                    continue;
+                }
+                newFilename = afterBeg;
+            }
+
+            // Step 3: Apply --removeEnd patterns (anchored to end of stem)
+            if (anchoredMatcher.HasEndPatterns)
+            {
+                var afterEnd = anchoredMatcher.ApplyEndRemoves(newFilename);
+                if (afterEnd is null)
+                {
+                    earlyResults.Add(RenameResult.SkippedResult(filename, "Pattern would erase filename stem"));
+                    continue;
+                }
+                newFilename = afterEnd;
+            }
+
+            // Step 4: Apply replace transforms in order (PAT-02, PAT-03 — after removes)
             foreach (var transform in replaceTransforms)
             {
                 newFilename = transform.Apply(newFilename);

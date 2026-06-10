@@ -5,6 +5,7 @@ A .NET 9 command-line tool for batch-renaming files using pattern-based transfor
 ## Features
 
 - **Regex remove** — strip segments from filenames using raw .NET regular expressions
+- **Anchored remove** — strip from the beginning (`--removeBeg`) or end (`--removeEnd`) of the filename stem using a simple `{*}` wildcard or full regex
 - **Literal replace** — substitute any substring (`old->new`)
 - **Dry-run preview** — see every rename before it happens, no files touched
 - **Collision safety** — auto-numbers conflicting output names (`file(1).csv`) using a pre-flight two-pass plan
@@ -47,17 +48,19 @@ dotnet run --project src/FileRevamp -- <path> [options]
 ## Usage
 
 ```
-filerevamp <path> [--remove <pattern>]... [--replace <old->new>]... [--dry-run]
+filerevamp <path> [--remove <pattern>]... [--removeBeg <pattern>]... [--removeEnd <pattern>]... [--replace <old->new>]... [--dry-run]
 ```
 
 | Argument / Option | Description |
 |---|---|
 | `<path>` | Directory path or glob pattern (e.g. `C:\exports` or `C:\exports\*.csv`) |
-| `--remove <pattern>` | Regular expression pattern to remove from filenames (raw .NET regex). Must be syntactically valid. Repeatable. |
+| `--remove <pattern>` | Regular expression to remove from filenames (raw .NET regex). Repeatable. |
+| `--removeBeg <pattern>` | Remove a pattern anchored to the **beginning** of the filename stem. Accepts `{*}` wildcard shorthand or raw .NET regex. Case-insensitive. Repeatable. |
+| `--removeEnd <pattern>` | Remove a pattern anchored to the **end** of the filename stem (before the extension). Accepts `{*}` wildcard shorthand or raw .NET regex. Case-insensitive. Repeatable. |
 | `--replace <old->new>` | Literal replace in the form `old->new`. Find is case-sensitive. Repeatable. |
 | `--dry-run` / `-n` | Preview renames without modifying any files. |
 
-**Operation order is fixed:** all `--remove` patterns apply first, then all `--replace` operations.
+**Operation order is fixed:** `--remove` → `--removeBeg` → `--removeEnd` → `--replace`.
 
 ---
 
@@ -72,6 +75,30 @@ If a pattern is not syntactically valid regex, the tool reports an error naming 
 ```
 Error: --remove pattern '[unclosed' is not a valid regular expression: ...
 ```
+
+---
+
+## Anchored Removal (`--removeBeg` / `--removeEnd`)
+
+`--removeBeg` and `--removeEnd` remove patterns that are **anchored** — they only match at the very start or very end of the filename stem (the part before the extension). The extension is always preserved.
+
+Both options accept:
+- **Wildcard shorthand** using `{*}` — means "one or more of the preceding character" and is translated to a regex `+` quantifier before matching. For example, `_{*}` matches one or more consecutive underscores.
+- **Raw .NET regex** — any valid regex syntax works when no `{*}` token is present.
+
+Matching is **case-insensitive** by default.
+
+### `{*}` wildcard examples
+
+| Pattern | Matches at start/end | Removes |
+|---|---|---|
+| `_{*}` | `___report` | `___` |
+| `_{*}new` | `__newreport` | `__new` |
+| `_{*}new_{*}` | `__new___report` | `__new___` |
+
+Multiple patterns can be passed and are applied **in order** — the output of one feeds into the next.
+
+If all patterns together would erase the entire filename stem (leaving only the extension), the file is **skipped** with `[skipped: Pattern would erase filename stem]` and is never touched.
 
 ---
 
@@ -118,6 +145,36 @@ filerevamp C:\exports --replace PREFIX_->
 ```bash
 # Remove _draft_ segment, then replace spaces with underscores
 filerevamp C:\exports --remove _draft_ --replace " "->_
+```
+
+### Remove leading underscores (`--removeBeg`)
+
+```bash
+# Before: ___report.csv  →  After: report.csv
+filerevamp C:\exports --removeBeg "_{*}"
+
+# Before: _new_report.csv  →  After: report.csv
+filerevamp C:\exports --removeBeg "_{*}new_{*}"
+
+# Preview before committing
+filerevamp C:\exports --removeBeg "_{*}" --dry-run
+```
+
+### Remove trailing underscores (`--removeEnd`)
+
+```bash
+# Before: report___.csv  →  After: report.csv
+filerevamp C:\exports --removeEnd "_{*}"
+
+# Before: report_draft.csv  →  After: report.csv
+filerevamp C:\exports --removeEnd "_draft"
+```
+
+### Combine all four operations
+
+```bash
+# Remove _new (anywhere), then strip leading/trailing underscores, then replace _ with -
+filerevamp C:\exports --remove "_new" --removeBeg "_{*}" --removeEnd "_{*}" --replace "_->-"
 ```
 
 ### Target a glob pattern
@@ -187,6 +244,7 @@ src/FileRevamp/
 │   ├── DryRunFileSystem.cs       # No-op MoveFile; reads are real
 │   ├── FileDiscovery.cs          # Directory + glob enumeration via FileSystemGlobbing
 │   ├── WildcardPatternMatcher.cs # Compiles raw-regex remove patterns and applies them to a filename stem
+│   ├── AnchoredPatternMatcher.cs # Compiles --removeBeg / --removeEnd patterns; translates {*} wildcard to regex
 │   ├── ReplaceTransform.cs       # Parses and applies old->new literal replacement
 │   ├── RenameOrchestrator.cs     # Two-pass Plan() + Execute()
 │   ├── RenameProposal.cs         # Immutable record: source path + resolved destination
@@ -213,10 +271,10 @@ The rename pipeline separates planning from execution to guarantee no file is to
 
 ### Regex Pattern Validation
 
-`--remove` patterns are compiled directly as raw .NET `Regex` objects — no translation or escaping is performed. Validation happens in two places:
+`--remove` patterns are compiled directly as raw .NET `Regex` objects — no translation or escaping is performed. `--removeBeg` and `--removeEnd` patterns first have `{*}` translated to `+`, then are compiled as anchored regexes (`^(?:...)` and `(?:...)$` respectively). Validation happens in two places:
 
 1. `RenameSettings.Validate()` compiles each pattern before `Execute()` runs, returning a CLI validation error that names the offending pattern and the underlying parse failure.
-2. `WildcardPatternMatcher`'s constructor performs the same compilation (with `RegexOptions.IgnoreCase | RegexOptions.Compiled`), throwing `ArgumentException` with an explanatory message for any pattern that fails to compile.
+2. `WildcardPatternMatcher` and `AnchoredPatternMatcher` constructors compile patterns with `RegexOptions.IgnoreCase | RegexOptions.Compiled`, throwing `ArgumentException` for any pattern that fails to compile.
 
 This guarantees malformed patterns are rejected with a clear message before any file is touched, while valid patterns gain the full expressive power of .NET regex (lazy quantifiers, character classes, anchors, lookarounds, and more).
 

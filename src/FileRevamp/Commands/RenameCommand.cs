@@ -65,6 +65,10 @@ public sealed class RenameCommand : Command<RenameSettings>
         var patternMatcher = new WildcardPatternMatcher(
             settings.RemovePatterns ?? Array.Empty<string>());
 
+        var anchoredMatcher = new AnchoredPatternMatcher(
+            settings.RemoveBegPatterns ?? Array.Empty<string>(),
+            settings.RemoveEndPatterns ?? Array.Empty<string>());
+
         // Parse --replace operands into ReplaceTransform instances.
         // Format: "old->new" — split on first "->".
         // Track whether any operand failed to parse; return exit code 1 if so (CR-01).
@@ -101,7 +105,7 @@ public sealed class RenameCommand : Command<RenameSettings>
             .Where(p => !string.Equals(System.IO.Path.GetFileName(p), LogFileName, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        var (proposals, earlyResults) = orchestrator.Plan(filePaths, patternMatcher, replaceTransforms, directoryPath);
+        var (proposals, earlyResults) = orchestrator.Plan(filePaths, patternMatcher, anchoredMatcher, replaceTransforms, directoryPath);
         var executeResults = orchestrator.Execute(proposals, directoryPath, settings.DryRun);
         var results = earlyResults.Concat(executeResults).ToList();
 

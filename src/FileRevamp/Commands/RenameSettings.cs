@@ -15,7 +15,7 @@ public sealed class RenameSettings : CommandSettings
     [Description("Directory path containing files to rename, or a glob pattern (e.g. *.csv)")]
     public string Path { get; init; } = string.Empty;
 
-    [CommandOption("--remove")]
+    [CommandOption("--remove <regex>")]
     [Description("Regular expression pattern to remove from filenames (raw .NET regex, e.g. _draft_.*?_final). Must be a syntactically valid regex. Can be specified multiple times.")]
     public string[]? RemovePatterns { get; init; }
 

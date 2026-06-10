@@ -77,21 +77,30 @@ Error: --remove pattern '[unclosed' is not a valid regular expression: ...
 
 ## Examples
 
-### Remove a segment from filenames
+### Remove a literal segment from filenames
 
 ```bash
 # Before: report_new_2024.csv  →  After: report_2024.csv
 filerevamp C:\exports --remove _new
 
-# Before: export_draft_final.csv  →  After: export_final.csv  (regex matches and removes "draft_")
-filerevamp C:\exports --remove draft_
+# Before: export_draft_final.csv  →  After: export_final.csv
+filerevamp C:\exports --remove _draft_
 ```
 
-### Remove literal dots and parentheses
+### Remove using a regex pattern
 
 ```bash
-# Before: report.new.(2024).csv  →  After: report.new.csv
-filerevamp C:\exports --remove ".(2024)"
+# Lazy match: removes everything from the first "_new_" prefix onward-through the marker
+# Before: _foo_new_bar.csv  →  After: bar.csv
+filerevamp C:\exports --remove ".*?new_"
+
+# Remove a date suffix in the form _YYYY (four digits)
+# Before: report_2024.csv  →  After: report.csv
+filerevamp C:\exports --remove "_\d{4}"
+
+# Remove anything in parentheses (including the parens)
+# Before: report.(draft).csv  →  After: report.csv
+filerevamp C:\exports --remove "\([^)]*\)"
 ```
 
 ### Replace substrings

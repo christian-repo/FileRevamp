@@ -60,16 +60,16 @@ public sealed class EdgeCaseIntegrationTests : IDisposable
         return dir;
     }
 
-    // Test 1 — Wildcard pattern with literal dots and parentheses renames the file correctly (no regex error)
+    // Test 1 — Escaped regex pattern with literal dots and parentheses renames the file correctly
     [Fact]
     public void LiteralDotsAndParensInPattern_RenamesCorrectly()
     {
-        // ".(2024)" contains a literal dot and parentheses that must not be treated as regex metacharacters.
-        // WildcardCompiler runs Regex.Escape FIRST (Step 1) so . becomes \. and ( ) become \( \).
+        // Patterns are raw .NET regex now — to match the literal text ".(2024)" the dot and
+        // parentheses (regex metacharacters) must be escaped: \.\(2024\).
         var tempDir = CreateTempDir("report.new.(2024).csv");
         var tester = CreateTester();
 
-        var result = tester.Run(tempDir, "--remove", ".(2024)");
+        var result = tester.Run(tempDir, "--remove", @"\.\(2024\)");
 
         result.ExitCode.Should().Be(0, because: "literal dots and parens in the pattern must not cause a regex error");
         result.Output.Should().Contain("Renamed: 1", because: "the file matching the literal pattern must be renamed");

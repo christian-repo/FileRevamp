@@ -4,7 +4,7 @@ A .NET 9 command-line tool for batch-renaming files using pattern-based transfor
 
 ## Features
 
-- **Wildcard remove** — strip segments from filenames using `{*}`, `{+}`, `{?}` tokens
+- **Regex remove** — strip segments from filenames using raw .NET regular expressions
 - **Literal replace** — substitute any substring (`old->new`)
 - **Dry-run preview** — see every rename before it happens, no files touched
 - **Collision safety** — auto-numbers conflicting output names (`file(1).csv`) using a pre-flight two-pass plan
@@ -53,7 +53,7 @@ filerevamp <path> [--remove <pattern>]... [--replace <old->new>]... [--dry-run]
 | Argument / Option | Description |
 |---|---|
 | `<path>` | Directory path or glob pattern (e.g. `C:\exports` or `C:\exports\*.csv`) |
-| `--remove <pattern>` | Wildcard pattern to remove from filenames. Repeatable. |
+| `--remove <pattern>` | Regular expression pattern to remove from filenames (raw .NET regex). Must be syntactically valid. Repeatable. |
 | `--replace <old->new>` | Literal replace in the form `old->new`. Find is case-sensitive. Repeatable. |
 | `--dry-run` / `-n` | Preview renames without modifying any files. |
 
@@ -61,39 +61,46 @@ filerevamp <path> [--remove <pattern>]... [--replace <old->new>]... [--dry-run]
 
 ---
 
-## Wildcard Syntax
+## Remove Pattern Syntax
 
-`--remove` uses a simplified wildcard syntax. All non-token characters are treated as **literals** (dots, parentheses, hyphens are safe).
+`--remove` accepts raw [.NET regular expressions](https://learn.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference) — patterns are compiled and matched directly, with no translation or escaping layer in between. Any valid regex syntax works (`.*`, `.+`, character classes, quantifiers, anchors, lookarounds, etc.).
 
-| Token | Matches | Regex equivalent |
-|---|---|---|
-| `{*}` | Zero or more characters | `.*` |
-| `{+}` | One or more characters | `.+` |
-| `{?}` | Zero or one character | `.?` |
+Matching is **case-insensitive** and applies to the filename stem only — the extension is always preserved, so a pattern can never consume the dot separator.
 
-Matching is **case-insensitive**.
+If a pattern is not syntactically valid regex, the tool reports an error naming the pattern and the parse failure, before any files are touched:
 
-> Use `{*}` and `{+}` instead of bare `*` and `+`. The tool will error on bare wildcards with a hint.
+```
+Error: --remove pattern '[unclosed' is not a valid regular expression: ...
+```
 
 ---
 
 ## Examples
 
-### Remove a segment from filenames
+### Remove a literal segment from filenames
 
 ```bash
 # Before: report_new_2024.csv  →  After: report_2024.csv
 filerevamp C:\exports --remove _new
 
-# Before: export_draft_final.csv  →  After: export_final.csv  (wildcard strips middle segment)
-filerevamp C:\exports --remove export_{*}draft_
+# Before: export_draft_final.csv  →  After: export_final.csv
+filerevamp C:\exports --remove _draft_
 ```
 
-### Remove literal dots and parentheses
+### Remove using a regex pattern
 
 ```bash
-# Before: report.new.(2024).csv  →  After: report.new.csv
-filerevamp C:\exports --remove ".(2024)"
+# Lazy match: removes everything from the first "_new_" prefix onward-through the marker
+# Before: _foo_new_bar.csv  →  After: bar.csv
+filerevamp C:\exports --remove ".*?new_"
+
+# Remove a date suffix in the form _YYYY (four digits)
+# Before: report_2024.csv  →  After: report.csv
+filerevamp C:\exports --remove "_\d{4}"
+
+# Remove anything in parentheses (including the parens)
+# Before: report.(draft).csv  →  After: report.csv
+filerevamp C:\exports --remove "\([^)]*\)"
 ```
 
 ### Replace substrings
@@ -179,8 +186,7 @@ src/FileRevamp/
 │   ├── FileSystem.cs             # Production implementation — calls System.IO
 │   ├── DryRunFileSystem.cs       # No-op MoveFile; reads are real
 │   ├── FileDiscovery.cs          # Directory + glob enumeration via FileSystemGlobbing
-│   ├── WildcardCompiler.cs       # Translates {*}/{+}/{?} tokens to compiled Regex
-│   ├── WildcardPatternMatcher.cs # Applies remove patterns to a filename stem
+│   ├── WildcardPatternMatcher.cs # Compiles raw-regex remove patterns and applies them to a filename stem
 │   ├── ReplaceTransform.cs       # Parses and applies old->new literal replacement
 │   ├── RenameOrchestrator.cs     # Two-pass Plan() + Execute()
 │   ├── RenameProposal.cs         # Immutable record: source path + resolved destination
@@ -205,16 +211,14 @@ The rename pipeline separates planning from execution to guarantee no file is to
 
 `CollisionResolver` is source-aware: it receives the set of all source filenames in the batch and skips the disk-exists check for those names, since they will vacate during Execute. This prevents false-positive auto-numbering when a computed destination matches a source file that is also being renamed in the same batch.
 
-### Wildcard Compilation
+### Regex Pattern Validation
 
-`WildcardCompiler.ToRegex` applies a strict four-step conversion:
+`--remove` patterns are compiled directly as raw .NET `Regex` objects — no translation or escaping is performed. Validation happens in two places:
 
-1. `Regex.Escape(pattern)` — escapes all regex metacharacters first (dots, parens, brackets become literals)
-2. Replace the now-escaped brace tokens (`\{\*}` → `(.*?)`) with non-greedy quantifiers
-3. Optionally wrap in `^...$` anchors
-4. Compile with `RegexOptions.IgnoreCase | RegexOptions.Compiled`
+1. `RenameSettings.Validate()` compiles each pattern before `Execute()` runs, returning a CLI validation error that names the offending pattern and the underlying parse failure.
+2. `WildcardPatternMatcher`'s constructor performs the same compilation (with `RegexOptions.IgnoreCase | RegexOptions.Compiled`), throwing `ArgumentException` with an explanatory message for any pattern that fails to compile.
 
-Step 1 before Step 2 is critical: it ensures literal `.`, `(`, `)` in patterns are never interpreted as regex metacharacters.
+This guarantees malformed patterns are rejected with a clear message before any file is touched, while valid patterns gain the full expressive power of .NET regex (lazy quantifiers, character classes, anchors, lookarounds, and more).
 
 ---
 

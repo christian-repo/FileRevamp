@@ -4,14 +4,12 @@ using System.Text.RegularExpressions;
 namespace FileRevamp.Core;
 
 /// <summary>
-/// Applies one or more wildcard remove patterns to a filename string.
-/// Patterns are compiled via <see cref="WildcardCompiler"/> at construction time into a
-/// single unanchored regex each — used to find and strip the matching substring, wherever
-/// it occurs in the stem. This is the same "find the matched span, delete it" semantic for
-/// BOTH wildcard patterns (e.g. "_{*}new_{*}") and pure literal patterns (e.g. "_new"):
-/// a remove pattern always means "delete the text this pattern matches", never "keep part
-/// of the matched text" (issue #7 — a previous "keep literal prefix + first capture"
-/// replacement scheme produced corrupted results such as "_____.txt").
+/// Applies one or more user-supplied regex remove patterns to a filename string.
+///
+/// Patterns are passed through verbatim to <see cref="Regex"/> — no wildcard translation
+/// or escaping is performed. Each pattern must be a syntactically valid .NET regular
+/// expression; the constructor throws <see cref="ArgumentException"/> with an explanatory
+/// message for any pattern that fails to compile.
 ///
 /// NFC normalization is applied to the filename stem before matching (Pitfall 10 mitigation).
 /// </summary>
@@ -27,23 +25,37 @@ public sealed class WildcardPatternMatcher
     public bool HasPatterns => _removeRegexes.Count > 0;
 
     /// <summary>
-    /// Initialises the matcher, compiling each pattern via <see cref="WildcardCompiler.ToRegex"/>
-    /// into an unanchored regex (matches the pattern anywhere in the stem).
+    /// Compiles each pattern as a raw .NET regular expression.
     /// </summary>
-    /// <param name="removePatterns">Zero or more wildcard patterns to remove from filenames.</param>
+    /// <param name="removePatterns">Zero or more regex patterns to remove from filenames.</param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when a pattern is not a syntactically valid .NET regular expression. The message
+    /// names the offending pattern and includes the underlying parse error.
+    /// </exception>
     public WildcardPatternMatcher(IEnumerable<string> removePatterns)
     {
-        _removeRegexes = removePatterns
-            .Select(p => WildcardCompiler.ToRegex(p, anchored: false))
-            .ToList()
-            .AsReadOnly();
+        var compiled = new List<Regex>();
+        foreach (var pattern in removePatterns)
+        {
+            try
+            {
+                compiled.Add(new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled));
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException(
+                    $"'{pattern}' is not a valid regular expression: {ex.Message}", ex);
+            }
+        }
+
+        _removeRegexes = compiled.AsReadOnly();
     }
 
     /// <summary>
-    /// Applies all remove patterns to the filename in order. Each pattern that matches
-    /// anywhere in the current stem has its matched span deleted (replaced with "").
+    /// Applies all remove patterns to the filename in order, removing the first matching
+    /// substring each pattern finds in the current stem.
     ///
-    /// The extension is always preserved separately so {*} cannot consume the dot separator.
+    /// The extension is always preserved separately so a pattern cannot consume the dot separator.
     ///
     /// Filenames are NFC-normalized before matching to handle NFD filenames from macOS shares
     /// (Pitfall 10 mitigation).
@@ -60,7 +72,7 @@ public sealed class WildcardPatternMatcher
         var normalizedFilename = filename.Normalize(NormalizationForm.FormC);
 
         // Split off the extension so patterns operate on the stem only.
-        // This preserves the extension through transforms and prevents {*} from
+        // This preserves the extension through transforms and prevents a pattern from
         // consuming the dot-extension separator.
         var extension = Path.GetExtension(normalizedFilename);
         var stem = Path.GetFileNameWithoutExtension(normalizedFilename);
